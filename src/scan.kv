@@ -1,0 +1,706 @@
+#:kivy 1.9.1
+###################################################################################
+
+<StartScreen>:
+  powerOff: power_off
+  titleLabel: title_label
+  name: 'start'
+  Label:
+    pos_hint: {'center_x': 0.5, 'center_y': 0.1}
+    id: power_off
+    font_size: 24
+    markup: True
+    text: ''
+
+  AnchorLayout:
+    anchor_x: 'left'
+    anchor_y: 'top'
+    Button:
+      size_hint: (0.2, 0.1)
+      text: 'Quit to Console'
+      on_press: root.quit()
+
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.5)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    spacing: 20
+
+    Label:
+      id: title_label
+      font_size: 48
+      text: 'Pi Scan'
+
+    Button:
+      text: 'Begin'
+      on_press:
+        root.manager.transition.direction = 'left'
+        root.manager.current = 'configure-disk'
+
+###################################################################################
+
+<ConfigureDiskScreen>:
+  diskStatus: disk_status
+  diskNext: disk_next
+  spinner: spinner
+  name: 'configure-disk'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.9)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    spacing: 20
+
+    Label:
+      id: disk_status
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 36
+      markup: True
+      text: 'Searching for storage...'
+    Image:
+      id: spinner
+      source: 'spinner.gif'
+      anim_delay: 1.0/6.0
+
+  RelativeLayout:
+    size_hint: (1, 0.15)
+    pos_hint: {'center_x': 0.5}
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'bottom'
+      Button:
+        id: disk_next
+        size_hint: (0.2, 1)
+        text: 'Next'
+        on_press:
+          root.manager.transition.direction = 'left'
+          root.manager.current = 'configure-camera'
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Back'
+        on_press:
+          root.manager.transition.direction = 'right'
+          root.manager.current = 'start'
+
+###################################################################################
+
+<ConfigureFolderScreen>:
+  folderLabel: folder_label
+  name: 'configure-folder'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.5)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    spacing: 20
+
+    Label:
+      size_hint: (1, 0.1)
+      id: folder_label
+      font_size: 36
+      markup: True
+      text: 'Current Scan Folder is [color=999999]/[/color]'
+
+    Button:
+      id: change_folder
+      size_hint: (0.4, 0.1)
+      pos_hint: {'center_x': 0.5}
+      text: 'Change Scan Folder'
+
+  RelativeLayout:
+    size_hint: (1, 0.15)
+    pos_hint: {'center_x': 0.5}
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Next'
+        on_press:
+          root.manager.transition.direction = 'left'
+          root.manager.current = 'configure-camera'
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Back'
+        on_press:
+          root.manager.transition.direction = 'right'
+          root.manager.current = 'configure-disk'
+
+###################################################################################
+
+<ConfigureCameraScreen>:
+  cameraLabel: camera_label
+  cameraNext: camera_next
+  spinner: spinner
+  name: 'configure-camera'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.9)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+
+    Label:
+      id: camera_label
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 36
+      markup: True
+      text: 'Searching for cameras...'
+    Image:
+      id: spinner
+      width: 66
+      height: 66
+      source: 'spinner.gif'
+      anim_delay: 1.0/6.0
+
+  RelativeLayout:
+    size_hint: (1, 0.15)
+    pos_hint: {'center_x': 0.5}
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'bottom'
+      Button:
+        id: camera_next
+        size_hint: (0.2, 1)
+        text: 'Next'
+        on_press:
+          root.next()
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Back'
+        on_press:
+          root.manager.transition.direction = 'right'
+          root.manager.current = 'configure-disk'
+
+###################################################################################
+
+<FocusCameraScreen>:
+  preview: preview
+  noPreviewLabel: no_preview_label
+  cameraNext: camera_next
+  cameraRefocus: camera_refocus
+  cameraSwap: camera_swap
+  cameraLabel: camera_label
+  name: 'focus-camera'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.85)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    spacing: 10
+
+    Label:
+      size_hint: (1, 0.05)
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      id: camera_label
+      font_size: 24
+      text: 'Camera Configuration'
+
+    PreviewOutside:
+      id: preview
+      size_hint: (1, 0.95)
+
+  RelativeLayout:
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'center'
+      Label:
+        id: no_preview_label
+        size_hint: (1, 0.1)
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        font_size: 36
+        text: 'Press Pages Against Glass and Tap Refocus'
+
+  RelativeLayout:
+    size_hint: (1, 0.15)
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      BoxLayout:
+        orientation: 'horizontal'
+        size_hint: (0.5, 1)
+        spacing: 10
+        Button:
+          id: camera_refocus
+          size_hint: (0.5, 1)
+          pos_hint: {'center_x': 0.5}
+          text: 'Refocus'
+          on_press:
+            root.refocus()
+        Button:
+          id: camera_swap
+          size_hint: (0.5, 1)
+          pos_hint: {'center_x': 0.5}
+          text: 'Swap'
+          on_press:
+            root.swap()
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'bottom'
+      Button:
+        id: camera_next
+        size_hint: (0.2, 1)
+        text: 'Next'
+        on_press:
+          root.next()
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Back'
+        on_press:
+          root.done()
+          root.manager.transition.direction = 'right'
+          root.manager.current = 'configure-camera'
+
+###################################################################################
+
+<PreviewOutside>:
+  odd: odd
+  oddLabel: odd_label
+  even: even
+  evenLabel: even_label
+  scatter: scatter
+  ScatterLayout:
+    id: scatter
+    canvas.before:
+      ScissorPush:
+        x: self.parent.x
+        y: self.parent.y + self.parent.height * 0.15
+        width: self.parent.width
+        height: self.parent.height * 0.8
+    canvas.after:
+      ScissorPop
+    do_collide_after_children: False
+    do_rotation: False
+    auto_bring_to_front: False
+    #scale_max: 1
+    #scale_min: 0.1
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint: (1, 0.8)
+      pos_hint: { 'center_y': 0.6 }
+
+      BoxLayout:
+        orientation: 'vertical'
+        size_hint: (0.5, 1)
+        Label:
+          id: even_label
+          font_size: 18
+          text_size: self.size
+          halign: 'center'
+          valign: 'middle'
+          size_hint: (1, 0.05)
+          text: 'Even Page'
+        PreviewInside:
+          id: odd
+      BoxLayout:
+        orientation: 'vertical'
+        size_hint: (0.5, 1)
+        Label:
+          id: odd_label
+          font_size: 18
+          text_size: self.size
+          halign: 'center'
+          valign: 'middle'
+          size_hint: (1, 0.05)
+          text: 'Odd Page'
+        PreviewInside:
+          id: even
+  AnchorLayout:
+    anchor_x: 'right'
+    anchor_y: 'top'
+    BoxLayout:
+      orientation: 'vertical'
+      size_hint: (0.1, 0.5)
+      Button:
+        size_hint: (1, 0.33)
+        text: '+'
+        on_press: root.zoomIn()
+      Button:
+        size_hint: (1, 0.33)
+        text: '-'
+        on_press: root.zoomOut()
+      Button:
+        size_hint: (1, 0.33)
+        text: '0'
+        on_press: root.zoomZero()
+
+###################################################################################
+
+<PreviewInside>:
+  size_hint_y: 1.0
+  size_hint_x: None
+  pos_hint: { 'center_x': 0.5 }
+  #size_hint_x: 1.0
+  #size_hint_y: None
+  #height: self.width * 3240.0/4320.0
+  #width: self.height * 4320.0 / 3240.0
+  cols: 3
+  #size_hint: (3240.0/4320.0, 1.0)
+  #cols: 3
+  #Image:
+  #  size_hint: (2000.0/4320.0, 2000.0/3240.0)
+  #  source: 'test/even-1.jpg'
+  #Image:
+  #  size_hint: (2000.0/4320.0, 2000.0/3240.0)
+  #  source: 'test/even-2.jpg'
+  #Image:
+  #  size_hint: (320.0/4320.0, 2000.0/3240.0)
+  #  source: 'test/even-3.jpg'
+  #Image:
+  #  size_hint: (2000.0/4320.0, 1240.0/3240.0)
+  #  source: 'test/even-4.jpg'
+  #Image:
+  #  size_hint: (2000.0/4320.0, 1240.0/3240.0)
+  #  source: 'test/even-5.jpg'
+  #Image:
+  #  size_hint: (320.0/4320.0, 1240.0/3240.0)
+  #  source: 'test/even-6.jpg'
+
+###################################################################################
+
+<CaptureScreen>:
+  preview: preview
+  captureButton: capture
+  rescanButton: rescan
+  previewButton: preview_button
+  name: 'capture'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.85)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    spacing: 10
+
+    Label:
+      size_hint: (1, 0.05)
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      id: camera_label
+      font_size: 24
+      text: 'Ready For Capture'
+
+    PreviewOutside:
+      id: preview
+      size_hint: (1, 0.95)
+
+  RelativeLayout:
+    size_hint: (1, 1)
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'center'
+      Button:
+        id: preview_button
+        size_hint: (0.3, 0.1)
+        text: 'Show Preview'
+        on_press:
+          root.showPreview()
+
+  RelativeLayout:
+    size_hint: (1, 0.2)
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Done'
+        on_press:
+          root.done()
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      Button:
+        id: capture
+        size_hint: (0.4, 1)
+        text: 'Capture'
+        on_press:
+          root.capture()
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        id: rescan
+        size_hint: (0.2, 1)
+        text: 'Rescan'
+        on_press:
+          root.rescan()
+
+###################################################################################
+
+#<CameraFocusScreen>:
+#  name: 'camera-focus'
+#  BoxLayout:
+#    orientation: 'vertical'
+#    size_hint: (0.9, 0.5)
+#    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+#    spacing: 20
+#
+#    Label:
+#      size_hint: (1, 0.1)
+#      font_size: 36
+#      text: 'Press two pages full of text against the glass to find the focus point.'
+#
+#    Button:
+#      size_hint: (0.4, 0.1)
+#      pos_hint: {'center_x': 0.5}
+#      text: 'Refocus'
+#
+#  RelativeLayout:
+#    size_hint: (1, 0.15)
+#    AnchorLayout:
+#      anchor_x: 'right'
+#      anchor_y: 'bottom'
+#      Button:
+#        size_hint: (0.2, 1)
+#        text: 'Next'
+#        on_press:
+#          root.manager.current = 'capture'
+#    AnchorLayout:
+#      anchor_x: 'left'
+#      anchor_y: 'bottom'
+#      Button:
+#        size_hint: (0.2, 1)
+#        text: 'Back'
+#        on_press:
+#          root.manager.current = 'configure-camera'
+
+###################################################################################
+
+<CaptureWaitScreen>:
+  name: 'capture-wait'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.85)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    Label:
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 36
+      text: 'Capturing...'
+    Image:
+      id: spinner
+      width: 66
+      height: 66
+      source: 'spinner.gif'
+      anim_delay: 1.0/6.0
+  RelativeLayout:
+    size_hint: (1, 0.1)
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Restart Pi Scan'
+        on_press:
+          exit()
+
+<PreviewWaitScreen>:
+  name: 'preview-wait'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.85)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    Label:
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 36
+      text: 'Generating Preview...'
+    Image:
+      id: spinner
+      width: 66
+      height: 66
+      source: 'spinner.gif'
+      anim_delay: 1.0/6.0
+  RelativeLayout:
+    size_hint: (1, 0.1)
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Restart Pi Scan'
+        on_press:
+          exit()
+
+<CaptureFailScreen>:
+  evenLabel: even_label
+  oddLabel: odd_label
+  name: 'capture-fail'
+  BoxLayout:
+    size_hint: (0.95, 1)
+    orientation: 'vertical'
+    Label:
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 36
+      text: 'Capture Failed.'
+    Label:
+      id: even_label
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 24
+      markup: True
+      text: 'even camera: '
+    Label:
+      id: odd_label
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 24
+      markup: True
+      text: 'odd camera: '
+    Button:
+      size_hint: (0.1, 0.2)
+      pos_hint: { 'center_x': 0.5 }
+      text: 'Ok'
+      on_press:
+        root.ok()
+  RelativeLayout:
+    size_hint: (1, 0.1)
+    AnchorLayout:
+      anchor_x: 'left'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Restart Pi Scan'
+        on_press:
+          exit()
+
+<DebugScreen>:
+  evenStatus: even_status
+  evenLog: even_log
+  evenMessage: even_message
+  oddStatus: odd_status
+  oddLog: odd_log
+  oddMessage: odd_message
+  okButton: ok
+  name: 'debug'
+  BoxLayout:
+    size_hint: (0.95, 1)
+    orientation: 'vertical'
+    Label:
+      size_hint: (1.0, 0.1)
+      font_size: 36
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      text: 'Camera Crashed.'
+    BoxLayout:
+      size_hint: (1.0, 0.2)
+      orientation: 'horizontal'
+      Label:
+        font_size: 24
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        text: 'Even Camera'
+      Label:
+        id: even_status
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        font_size: 24
+        markup: True
+        text: 'Searching...'
+      Button:
+        id: even_log
+        text: 'Get Debug Log'
+        on_press:
+          root.getEvenLog()
+    Label:
+      size_hint: (1.0, 0.1)
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      id: even_message
+      font_size: 24
+      text: ''
+    Label:
+      size_hint: (1.0, 0.1)
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      font_size: 36
+      text: '---------------------'
+    BoxLayout:
+      size_hint: (1.0, 0.2)
+      orientation: 'horizontal'
+      Label:
+        font_size: 24
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        text: 'Odd Camera'
+      Label:
+        id: odd_status
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        font_size: 24
+        markup: True
+        text: 'Searching...'
+      Button:
+        id: odd_log
+        text: 'Get Debug Log'
+        on_press:
+          root.getOddLog()
+    Label:
+      id: odd_message
+      text_size: self.size
+      halign: 'center'
+      valign: 'middle'
+      size_hint: (1.0, 0.1)
+      font_size: 24
+      text: ''
+    RelativeLayout:
+      size_hint: (1, 0.2)
+      AnchorLayout:
+        anchor_x: 'right'
+        anchor_y: 'bottom'
+        Button:
+          id: ok
+          size_hint: (0.2, 1)
+          text: 'Ok'
+          on_press:
+            root.ok()
+      AnchorLayout:
+        anchor_x: 'left'
+        anchor_y: 'bottom'
+        Button:
+          size_hint: (0.2, 1)
+          text: 'Restart Pi Scan'
+          on_press:
+            exit()
+
+
+<ScanRoot>:
+  StartScreen:
+  ConfigureDiskScreen:
+  ConfigureFolderScreen:
+  #ChangeFolderScreen:
+  #NewFolderScreen:
+  ConfigureCameraScreen:
+  FocusCameraScreen:
+  CaptureScreen:
+  CaptureWaitScreen:
+  PreviewWaitScreen:
+  CaptureFailScreen:
+  DebugScreen:
