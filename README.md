@@ -1,6 +1,6 @@
 # pi-scan
 
-Pi Scan is a simple and robust controller for book scanners. It was designed to work with the [http://diybookscanner.org/archivis](Archivist book scanner). For questions or help, visit the [forum](http://diybookscanner.org/forum) or email help at tenrec dot builders.
+Pi Scan is a simple and robust controller for book scanners. It was designed to work with the [Archivist book scanner](http://diybookscanner.org/archivist). For questions or help, visit the [forum](http://diybookscanner.org/forum) or email help at tenrec dot builders.
 
 # Requirements
 
