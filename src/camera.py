@@ -231,7 +231,11 @@ class Camera:
     filename = path + '/debug/' + position + '-rom.log'
 
     self.message = 'Failed to delete old rom log from SD Card'
-    os.system('rm -f ' + filename)
+    try:
+      os.remove(filename)
+    except:
+      # Could not remove file. Oh well.
+      pass
 
     self.message = 'Failed to generate new rom log on camera'
     self.device.lua_execute(

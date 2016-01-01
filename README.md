@@ -51,4 +51,5 @@ There are many camera settings which are not yet user-configurable. These settin
 
 # Version Notes
 
+0.2 -- Fix issues with spaces in path names and when writing error logs.
 0.1 -- Initial release

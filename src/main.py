@@ -11,7 +11,7 @@ from kivy.graphics.transformation import Matrix
 import camera_thread, stick, camera, preview, errorlog
 import os, json, string, re, traceback
 
-version = '0.1'
+version = '0.2'
 
 odd = None
 even = None
@@ -99,7 +99,7 @@ def loadConfig(mountPoint):
     fp.close()
     config = json.loads(jsonText)
   except Exception as e:
-    logfile.write('Failed to read config file: ' + str(e) + ': ' + str(e.args) + '\n\n' + jsonText)
+    errorlog.write('Failed to read config file: ' + str(e) + ': ' + str(e.args) + '\n\n' + jsonText)
 
 #########################################################################################
 
@@ -111,7 +111,7 @@ def saveConfig(mountPoint):
     fp.write(jsonText)
     fp.close()
   except Exception as e:
-    logfile.write('Failed to write config file: ' + str(e) + ': ' + str(e.args))
+    errorlog.write('Failed to write config file: ' + str(e) + ': ' + str(e.args))
 
 #########################################################################################
 
@@ -222,7 +222,8 @@ class StartScreen(Screen):
     self.manager.hasTransitioned = True
 
   def quit(self):
-    os.system('killall xinit')
+    os.system('killall run-pi-scan.sh')
+    exit()
 
 #########################################################################################
 
@@ -251,8 +252,16 @@ class ConfigureDiskScreen(Screen):
         self.diskStatus.text = 'Storage Found. Click next to continue.'
         self.diskNext.disabled = False
         self.spinner.opacity = 0.0
-        os.system('mkdir -p ' + self.manager.mountPoint + '/debug')
-        os.system('mkdir -p ' + self.manager.mountPoint + '/images')
+        try:
+          os.mkdir(self.manager.mountPoint + '/debug')
+        except:
+          # Directory exists
+          pass
+        try:
+          os.mkdir(self.manager.mountPoint + '/images')
+        except:
+          # Directory exists
+          pass
     else:
       self.diskStatus.text = '[color=ff3333]Multiple Drives Found.[/color] Disconnect all but one drive to continue.'
       self.diskNext.disabled = True
@@ -289,7 +298,11 @@ class NewFolderScreen(Screen):
       self.okButton.disabled = disabledState
 
   def clickAddFolder(self, name):
-    os.system('mkdir -p ' + self.manager.scanPath + '/' + name)
+    try:
+      os.mkdir(self.manager.scanPath + '/' + name)
+    except:
+      # Drectory exists
+      pass
     self.manager.updateScanChooser = True
 
 #########################################################################################
