@@ -7,7 +7,7 @@ def openLog(mountPoint):
   if logfile is not None:
     logfile.close()
     logfile = None
-  logfile = open(mountPoint + '/debug/error.log', 'w+')
+  logfile = open(mountPoint + '/debug/error.log', 'a+')
 
 def write(text):
   global logfile

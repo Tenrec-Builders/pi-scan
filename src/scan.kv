@@ -584,6 +584,25 @@
         on_press:
           exit()
 
+<CrashScreen>:
+  name: 'crash'
+  errorLabel: error_label
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (1, 1)
+    Label:
+      id: error_label
+      font_size: 12
+      text_size: self.size
+      halign: 'left'
+      valign: 'middle'
+      text: 'Pi Scan Crashed'
+    Button:
+      size_hint: (0.2, 0.05)
+      text: 'Restart Pi Scan'
+      on_press:
+        root.restart()
+
 <DebugScreen>:
   evenStatus: even_status
   evenLog: even_log
@@ -704,3 +723,4 @@
   PreviewWaitScreen:
   CaptureFailScreen:
   DebugScreen:
+  CrashScreen:

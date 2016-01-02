@@ -9,9 +9,9 @@ from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics.transformation import Matrix
 import camera_thread, stick, camera, preview, errorlog
-import os, json, string, re, traceback
+import os, json, string, re, traceback, errno
 
-version = '0.2'
+version = '0.4'
 
 odd = None
 even = None
@@ -218,8 +218,11 @@ class StartScreen(Screen):
     self.manager.mountPoint = None
 
   def on_pre_leave(self):
-    self.powerOff.text = ''
-    self.manager.hasTransitioned = True
+    try:
+      self.powerOff.text = ''
+      self.manager.hasTransitioned = True
+    except Exception as e:
+      handleCrash(e)
 
   def quit(self):
     os.system('killall run-pi-scan.sh')
@@ -249,27 +252,45 @@ class ConfigureDiskScreen(Screen):
         self.spinner.opacity = 1.0
       else:
         self.manager.mountPoint = string.strip(mountPoint.encode('ascii'), '\0')
-        self.diskStatus.text = 'Storage Found. Click next to continue.'
-        self.diskNext.disabled = False
-        self.spinner.opacity = 0.0
-        try:
-          os.mkdir(self.manager.mountPoint + '/debug')
-        except:
-          # Directory exists
-          pass
-        try:
-          os.mkdir(self.manager.mountPoint + '/images')
-        except:
-          # Directory exists
-          pass
+        failMessage = self.makeDirs()
+        if failMessage is None:
+          self.diskStatus.text = 'Storage Found. Click next to continue.'
+          self.diskNext.disabled = False
+          self.spinner.opacity = 0.0
+        else:
+          self.diskStatus.text = 'Storage Error: ' + failMessage
+          self.diskNext.disabled = True
+          self.spinner.opacity = 1.0
     else:
       self.diskStatus.text = '[color=ff3333]Multiple Drives Found.[/color] Disconnect all but one drive to continue.'
       self.diskNext.disabled = True
       self.spinner.opacity = 1.0
 
   def on_pre_enter(self):
-    self.diskStatus.text = 'Searching for storage...'
-    self.diskNext.disabled = True
+    try:
+      self.diskStatus.text = 'Searching for storage...'
+      self.diskNext.disabled = True
+    except Exception as e:
+      handleCrash(e)
+
+  def makeDirs(self):
+    errorMessage = None
+    try:
+      os.mkdir(self.manager.mountPoint + '/debug')
+    except OSError as e:
+      errorMessage = self.makeDirError(e)
+    if errorMessage is None:
+      try:
+        os.mkdir(self.manager.mountPoint + '/images')
+      except OSError as e:
+        errorMessage = self.makeDirError(e)
+    return errorMessage
+
+  def makeDirError(self, e):
+    result = None
+    if e.errno != errno.EEXIST:
+      result = e.strerror
+    return result
 
 #########################################################################################
 
@@ -301,7 +322,7 @@ class NewFolderScreen(Screen):
     try:
       os.mkdir(self.manager.scanPath + '/' + name)
     except:
-      # Drectory exists
+      # Directory exists
       pass
     self.manager.updateScanChooser = True
 
@@ -337,30 +358,45 @@ class ConfigureCameraScreen(Screen):
         self.spinner.opacity = 1.0
 
   def on_pre_enter(self):
-    errorlog.openLog(self.manager.mountPoint)
-    loadConfig(self.manager.mountPoint)
-    self.cameraLabel.text = 'Searching for cameras...'
-    self.cameraNext.disabled = True
+    try:
+      errorlog.openLog(self.manager.mountPoint)
+      loadConfig(self.manager.mountPoint)
+      self.cameraLabel.text = 'Searching for cameras...'
+      self.cameraNext.disabled = True
+    except Exception as e:
+      handleCrash(e)
 
   def next(self):
-    configureSides()
-    self.manager.transition.direction = 'left'
-    self.manager.current = 'focus-camera'
+    try:
+      configureSides()
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'focus-camera'
+    except Exception as e:
+      handleCrash(e)
 
 #########################################################################################
 
 class PreviewOutside(RelativeLayout):
   def zoomIn(self):
-    self.scatter.scale = self.scatter.scale * 1.2
+    try:
+      self.scatter.scale = self.scatter.scale * 1.2
+    except Exception as e:
+      handleCrash(e)
 
   def zoomOut(self):
-    self.scatter.scale = self.scatter.scale / 1.2
+    try:
+      self.scatter.scale = self.scatter.scale / 1.2
+    except Exception as e:
+      handleCrash(e)
 
   def zoomZero(self):
-    zeroScale = self.odd.height / self.scatter.height
-    oldScale = self.scatter.scale
-    self.scatter.transform = Matrix()
-    self.scatter.scale = zeroScale
+    try:
+      zeroScale = self.odd.height / self.scatter.height
+      oldScale = self.scatter.scale
+      self.scatter.transform = Matrix()
+      self.scatter.scale = zeroScale
+    except Exception as e:
+      handleCrash(e)
 
   #def on_touch_down(self, event):
   #  self.tryScroll(event)
@@ -409,58 +445,70 @@ class FocusCameraScreen(Screen):
       self.manager.current = 'debug'
 
   def on_pre_enter(self):
-    saveConfig(self.manager.mountPoint)
-    if self.manager.newCapture:
-      self.manager.newCapture = False
-      if (odd.code == camera_thread.COMPLETE and
-          even.code == camera_thread.COMPLETE):
-        self.manager.hasFocus = True
+    try:
+      saveConfig(self.manager.mountPoint)
+      if self.manager.newCapture:
+        self.manager.newCapture = False
+        if (odd.code == camera_thread.COMPLETE and
+            even.code == camera_thread.COMPLETE):
+          self.manager.hasFocus = True
+        else:
+          self.manager.hasFocus = False
+
+      if self.manager.newPreview:
+        self.manager.newPreview = False
+        self.noPreviewLabel.opacity = 0.0
+        self.preview.opacity = 1.0
       else:
-        self.manager.hasFocus = False
-    
-    if self.manager.newPreview:
-      self.manager.newPreview = False
-      self.noPreviewLabel.opacity = 0.0
-      self.preview.opacity = 1.0
-    else:
-      self.noPreviewLabel.opacity = 1.0
-      self.preview.opacity = 0.0
+        self.noPreviewLabel.opacity = 1.0
+        self.preview.opacity = 0.0
 
-    odd.code = camera_thread.COMPLETE
-    even.code = camera_thread.COMPLETE
+      odd.code = camera_thread.COMPLETE
+      even.code = camera_thread.COMPLETE
 
-    if self.manager.hasFocus:
-      self.cameraNext.disabled = False
-      self.cameraSwap.disabled = False
-      #self.cameraLabel.text = 'Tap Next to Begin Capture'
-    else:
-      self.cameraNext.disabled = True
-      self.cameraSwap.disabled = True
-      #self.cameraLabel.text = 'Press Pages Against Glass and Tap Refocus'
+      if self.manager.hasFocus:
+        self.cameraNext.disabled = False
+        self.cameraSwap.disabled = False
+        #self.cameraLabel.text = 'Tap Next to Begin Capture'
+      else:
+        self.cameraNext.disabled = True
+        self.cameraSwap.disabled = True
+        #self.cameraLabel.text = 'Press Pages Against Glass and Tap Refocus'
+    except Exception as e:
+      handleCrash(e)
 
   def done(self):
     self.preview.even.clear_widgets()
     self.preview.odd.clear_widgets()
 
   def next(self):
-    self.done()
-    self.manager.transition.direction = 'left'
-    self.manager.current = 'capture'
+    try:
+      self.done()
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'capture'
+    except Exception as e:
+      handleCrash(e)
 
   def refocus(self):
-    odd.capture('/debug/preview-odd.jpg', True)
-    even.capture('/debug/preview-even.jpg', True)
-    self.manager.capturePage = 'focus-camera'
-    self.manager.transition.direction = 'left'
-    self.manager.mustPreview = True
-    self.manager.current = 'capture-wait'
+    try:
+      odd.capture('/debug/preview-odd.jpg', True)
+      even.capture('/debug/preview-even.jpg', True)
+      self.manager.capturePage = 'focus-camera'
+      self.manager.transition.direction = 'left'
+      self.manager.mustPreview = True
+      self.manager.current = 'capture-wait'
+    except Exception as e:
+      handleCrash(e)
 
   def swap(self):
-    swapSides()
-    self.manager.newPreview = True
-    self.manager.capturePage = 'focus-camera'
-    self.manager.transition.direct = 'left'
-    self.manager.current = 'preview-wait'
+    try:
+      swapSides()
+      self.manager.newPreview = True
+      self.manager.capturePage = 'focus-camera'
+      self.manager.transition.direct = 'left'
+      self.manager.current = 'preview-wait'
+    except Exception as e:
+      handleCrash(e)
 
 #########################################################################################
 
@@ -502,8 +550,11 @@ class PreviewWaitScreen(Screen):
       self.manager.current = self.manager.capturePage
 
   def on_enter(self):
-    odd.setPreview()
-    even.setPreview()
+    try:
+      odd.setPreview()
+      even.setPreview()
+    except Exception as e:
+      handleCrash(e)
 
 #class CameraZoomScreen(Screen):
 #  def update(self, dt):
@@ -523,14 +574,17 @@ class CaptureScreen(Screen):
     Window.bind(on_key_down=self.on_key_down)
     
   def on_key_down(self, window, scancode, codepoint, key, other):
-    if self.manager.current == 'capture':
-      if (key == 's' or
-          key == 'c' or
-          key == 'b' or
-          key == ' '):
-        self.capture()
-      elif key == 'r' and self.lastEvenPage is not None:
-        self.rescan()
+    try:
+      if self.manager.current == 'capture':
+        if (key == 's' or
+            key == 'c' or
+            key == 'b' or
+            key == ' '):
+          self.capture()
+        elif key == 'r' and self.lastEvenPage is not None:
+          self.rescan()
+    except Exception as e:
+      handleCrash(e)
     return True
 
   def update(self, dt):
@@ -549,36 +603,39 @@ class CaptureScreen(Screen):
       self.manager.current = 'debug'
 
   def on_pre_enter(self):
-    if self.manager.newCapture:
-      self.manager.newCapture = False
-      if (odd.code == camera_thread.COMPLETE and
-          even.code == camera_thread.COMPLETE):
-        self.lastEvenPage = self.nextEvenPage
-        self.nextEvenPage += 2
-      odd.code = camera_thread.COMPLETE
-      even.code = camera_thread.COMPLETE
+    try:
+      if self.manager.newCapture:
+        self.manager.newCapture = False
+        if (odd.code == camera_thread.COMPLETE and
+            even.code == camera_thread.COMPLETE):
+          self.lastEvenPage = self.nextEvenPage
+          self.nextEvenPage += 2
+        odd.code = camera_thread.COMPLETE
+        even.code = camera_thread.COMPLETE
 
-    if self.manager.newPreview:
-      self.manager.newPreview = False
-      self.preview.opacity = 1.0
-      self.previewButton.opacity = 0.0
-      self.previewButton.disabled = True
-    else:
-      self.preview.opacity = 0.0
-      if self.lastEvenPage is not None:
-        self.previewButton.opacity = 1.0
-        self.previewButton.disabled = False
-      else:
+      if self.manager.newPreview:
+        self.manager.newPreview = False
+        self.preview.opacity = 1.0
         self.previewButton.opacity = 0.0
         self.previewButton.disabled = True
+      else:
+        self.preview.opacity = 0.0
+        if self.lastEvenPage is not None:
+          self.previewButton.opacity = 1.0
+          self.previewButton.disabled = False
+        else:
+          self.previewButton.opacity = 0.0
+          self.previewButton.disabled = True
 
-    if self.nextEvenPage is None:
-      self.resetPages()
+      if self.nextEvenPage is None:
+        self.resetPages()
 
-    if self.lastEvenPage is None:
-      self.rescanButton.disabled = True
-    else:
-      self.rescanButton.disabled = False
+      if self.lastEvenPage is None:
+        self.rescanButton.disabled = True
+      else:
+        self.rescanButton.disabled = False
+    except Exception as e:
+      handleCrash(e)
 
   def resetPages(self):
     pattern = re.compile('^([0-9]+)\.jpg$')
@@ -600,11 +657,17 @@ class CaptureScreen(Screen):
     self.nextEvenPage = largest
 
   def capture(self):
-    self.scanAt(self.nextEvenPage)
+    try:
+      self.scanAt(self.nextEvenPage)
+    except Exception as e:
+      handleCrash(e)
 
   def rescan(self):
-    self.nextEvenPage = self.lastEvenPage
-    self.scanAt(self.nextEvenPage)
+    try:
+      self.nextEvenPage = self.lastEvenPage
+      self.scanAt(self.nextEvenPage)
+    except Exception as e:
+      handleCrash(e)
 
   def scanAt(self, pageNumber):
     if pageNumber is not None:
@@ -619,17 +682,23 @@ class CaptureScreen(Screen):
     return '/images/%04d.jpg' % number
 
   def done(self):
-    self.preview.even.clear_widgets()
-    self.preview.odd.clear_widgets()
-    self.manager.transition.direction = 'right'
-    self.manager.current = 'start'
+    try:
+      self.preview.even.clear_widgets()
+      self.preview.odd.clear_widgets()
+      self.manager.transition.direction = 'right'
+      self.manager.current = 'start'
+    except Exception as e:
+      handleCrash(e)
 
   def showPreview(self):
-    self.preview.evenLabel.text = self.makeFile(self.lastEvenPage)
-    self.preview.oddLabel.text = self.makeFile(self.lastEvenPage + 1)
-    self.manager.capturePage = 'capture'
-    self.manager.transition.direction = 'left'
-    self.manager.current = 'preview-wait'
+    try:
+      self.preview.evenLabel.text = self.makeFile(self.lastEvenPage)
+      self.preview.oddLabel.text = self.makeFile(self.lastEvenPage + 1)
+      self.manager.capturePage = 'capture'
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'preview-wait'
+    except Exception as e:
+      handleCrash(e)
 
 #########################################################################################
 
@@ -645,14 +714,20 @@ class CaptureFailScreen(Screen):
       label.text = side.position + ' camera: [color=ffaaaa]Failed[/color]: ' + side.message
 
   def on_pre_enter(self):
-    self.evenLabel.text = 'Even Camera: '
-    self.oddLabel.text = 'Odd Camera: '
+    try:
+      self.evenLabel.text = 'Even Camera: '
+      self.oddLabel.text = 'Odd Camera: '
+    except Exception as e:
+      handleCrash(e)
 
   def ok(self):
-    odd.code = camera_thread.COMPLETE
-    even.code = camera_thread.COMPLETE
-    self.manager.transition.direction = 'left'
-    self.manager.current = self.manager.capturePage
+    try:
+      odd.code = camera_thread.COMPLETE
+      even.code = camera_thread.COMPLETE
+      self.manager.transition.direction = 'left'
+      self.manager.current = self.manager.capturePage
+    except Exception as e:
+      handleCrash(e)
 
 #########################################################################################
 
@@ -687,25 +762,37 @@ class DebugScreen(Screen):
       log.disabled = True
 
   def on_pre_enter(self):
-    self.oddMessage.text = ''
-    self.evenMessage.text = ''
-    self.oddStatus.text = 'Searching...'
-    self.evenStatus.text = 'Searching...'
+    try:
+      self.oddMessage.text = ''
+      self.evenMessage.text = ''
+      self.oddStatus.text = 'Searching...'
+      self.evenStatus.text = 'Searching...'
+    except Exception as e:
+      handleCrash(e)
 
   def ok(self):
-    odd.code = camera_thread.COMPLETE
-    even.code = camera_thread.COMPLETE
-    odd.camera.isReady = False
-    even.camera.isReady = False
-    self.manager.hasFocus = False
-    self.manager.transition.direction = 'left'
-    self.manager.current = 'focus-camera'
+    try:
+      odd.code = camera_thread.COMPLETE
+      even.code = camera_thread.COMPLETE
+      odd.camera.isReady = False
+      even.camera.isReady = False
+      self.manager.hasFocus = False
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'focus-camera'
+    except Exception as e:
+      handleCrash(e)
 
   def getOddLog(self):
-    self.getLog(odd)
+    try:
+      self.getLog(odd)
+    except Exception as e:
+      handleCrash(e)
 
   def getEvenLog(self):
-    self.getLog(even)
+    try:
+      self.getLog(even)
+    except Exception as e:
+      handleCrash(e)
 
   def getLog(self, side):
     try:
@@ -716,6 +803,36 @@ class DebugScreen(Screen):
     
 #########################################################################################
 
+hasCrashed = False
+crashMessage = None
+
+def handleCrash(e):
+  global hasCrashed, crashMessage
+  crashMessage = 'Crash Log: ' + str(e) + ': ' + str(e.args) + ':\n' + traceback.format_exc()
+  hasCrashed = True
+
+def checkForCrash(manager):
+  global hasCrashed
+  result = False
+  if hasCrashed:
+    hasCrashed = False
+    manager.current = 'crash'
+    result = True
+  return result
+
+class CrashScreen(Screen):
+
+  def update(self, dt):
+    pass
+
+  def on_pre_enter(self):
+    self.errorLabel.text = crashMessage
+
+  def restart(self):
+    exit(1)
+
+#########################################################################################
+
 class ScanApp(App):
   def build(self):
     self.manager = ScanRoot()
@@ -723,10 +840,14 @@ class ScanApp(App):
     return self.manager
 
   def update(self, dt):
-    if (not self.manager.hasTransitioned or
-        (self.manager.current_screen.transition_progress == 1 and
-         self.manager.current_screen.transition_state == 'in')):
-      self.manager.current_screen.update(dt)
+    try:
+      if not checkForCrash(self.manager):
+        if (not self.manager.hasTransitioned or
+            (self.manager.current_screen.transition_progress == 1 and
+             self.manager.current_screen.transition_state == 'in')):
+          self.manager.current_screen.update(dt)
+    except Exception as e:
+      handleCrash(e)
     return True
 
 if __name__ == '__main__':

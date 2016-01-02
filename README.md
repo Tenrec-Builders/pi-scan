@@ -51,5 +51,7 @@ There are many camera settings which are not yet user-configurable. These settin
 
 # Version Notes
 
+0.4 -- Detect when the /debug and /images directories fail to get created and note the problem in the storage screen.
+0.3 -- Add more crash detection and a screen which displays the error in case of unexpected exceptions
 0.2 -- Fix issues with spaces in path names and when writing error logs.
 0.1 -- Initial release
