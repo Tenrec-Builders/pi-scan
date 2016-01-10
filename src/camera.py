@@ -3,6 +3,20 @@ import chdkptp
 from lupa import LuaError
 import errorlog
 
+choiceToFactor = {
+  'Min Zoom': 0.0,
+  '1': 0.1,
+  '2': 0.2,
+  '3': 0.3,
+  '4': 0.4,
+  '5': 0.5,
+  '6': 0.6,
+  '7': 0.7,
+  '8': 0.8,
+  '9': 0.9,
+  'Max Zoom': 1.0
+  }
+
 def search():
   result = []
   try:
@@ -25,13 +39,8 @@ class Camera:
       self.whitebalance = 4
     self.device = chdkptp.ChdkDevice(info)
     self.serial = info.serial_num
-    self.zoom_steps = 128
-    self.settings = {
-      #'zoom': 25,
-      #'whitebalance': 'tungsten',
-      #'focus': 'auto',
-      #'iso': 80
-      }
+    self.zoom_steps = None
+    self.config = config
     self.isReady = False
     self.message = ''
     self.position = 'odd'
@@ -78,7 +87,8 @@ class Camera:
 
   def prepare_zoom(self):
     self.message = 'Failed to set zoom'
-    self.device.lua_execute('set_zoom(25);sleep(250);', do_return=False)
+    self.device.lua_execute('set_zoom(%d);sleep(250);' % self.calculate_zoom(),
+                            do_return=False)
 
   def prepare_nd_filter(self):
     self.message = 'Failed to disable nd filter'
@@ -126,6 +136,20 @@ class Camera:
     except Exception as e:
       self.log('Failed to refocus: ' + str(e.args) + '\n' + traceback.format_exc())
     return success
+
+  def unlockFocus(self):
+    success = False
+    try:
+      if self.is_connected():
+        self.message = 'Error during unlock focus'
+        self.device.lua_execute("set_aflock(0);sleep(50);", do_return=False)
+        success = True
+      else:
+        self.message = 'Lost connection before unlock focus'
+        self.log('Failed to unlock focus: ' + self.message)
+    except Exception as e:
+      self.log('Failed to refocus: ' + str(e.args) + '\n' + traceback.format_exc())
+    return success
     
   def connect(self):
     success = False
@@ -137,6 +161,20 @@ class Camera:
     except Exception as e:
       self.log('Failed to connect: ' + str(e.args) + '\n' + traceback.format_exc())
     return success
+
+
+  ###########################################################################
+
+  def calculate_zoom(self):
+    if self.zoom_steps is None:
+      self.zoom_steps = self.device.lua_execute('return get_zoom_steps()')
+    choice = '5'
+    if 'zoom' in self.config:
+      choice = self.config['zoom']
+    factor = 0.5
+    if choice in choiceToFactor:
+      factor = choiceToFactor[choice]
+    return max(round(self.zoom_steps * factor) - 1, 0)
 
   ###########################################################################
 

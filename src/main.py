@@ -11,7 +11,7 @@ from kivy.graphics.transformation import Matrix
 import camera_thread, stick, camera, preview, errorlog
 import os, json, string, re, traceback, errno
 
-version = '0.4'
+version = '0.5'
 
 odd = None
 even = None
@@ -22,7 +22,7 @@ config = {}
 class CameraSide:
   def __init__(self, thread, position):
     self.thread = thread
-    self.config = json.loads('{}')
+    self.config = {}
     #if position == 'even':
     #  self.config['position'] = 'even'
     self.position = position
@@ -41,6 +41,7 @@ class CameraSide:
 
   def reset(self, info):
     self.serial = info.serial_num
+    self.config = {}
     self.camera = camera.Camera(info, self.config)
     self.camera.position = self.position
     self.camera.connect()
@@ -53,6 +54,7 @@ class CameraSide:
     self.thread.beginCapture(self.camera, shouldRefocus)
 
   def save(self, mountPoint):
+    #print 'Camera: ', self.position, ' saving image: ', self.filename
     if self.raw is not None and self.filename is not None and self.code == camera_thread.COMPLETE:
       fp = open(mountPoint + self.filename, 'w')
       fp.write(self.raw)
@@ -86,6 +88,21 @@ class CameraSide:
     self.preview.position(newPosition)
     self.camera.position = newPosition
 
+  def loadConfig(self, source):
+    mine = {}
+    if self.serial in source:
+      mine = source[self.serial]
+    for key in mine.keys():
+      self.config[key] = mine[key]
+
+  def saveConfig(self, dest):
+    mine = {}
+    if self.serial in dest:
+      mine = dest[self.serial]
+    for key in self.config.keys():
+      mine[key] = self.config[key]
+    dest[self.serial] = mine
+
 #########################################################################################
 
 def loadConfig(mountPoint):
@@ -98,6 +115,8 @@ def loadConfig(mountPoint):
     jsonText = fp.read()
     fp.close()
     config = json.loads(jsonText)
+    odd.loadConfig(config)
+    even.loadConfig(config)
   except Exception as e:
     errorlog.write('Failed to read config file: ' + str(e) + ': ' + str(e.args) + '\n\n' + jsonText)
 
@@ -119,9 +138,11 @@ def updateConfig():
   global config
   if odd.serial not in config:
     config[odd.serial] = {}
+  odd.saveConfig(config)
   config[odd.serial]['position'] = 'odd'
   if even.serial not in config:
     config[even.serial] = {}
+  even.saveConfig(config)
   config[even.serial]['position'] = 'even'
 
 #########################################################################################
@@ -178,6 +199,23 @@ def checkCameras():
   except Exception as e:
     errorlog.write('Failed to reset cameras: ' + str(e.args) + '\n' + traceback.format_exc())
   return (oddFound, evenFound, tooManyCameras)
+
+#########################################################################################
+
+def checkForDisconnected(manager):
+  # Proactively detect when cameras are disconnected or crash
+  if odd.camera is None or not odd.camera.is_connected():
+    odd.code = camera_thread.DISCONNECTED
+    odd.message = 'Lost Connection to Camera'
+    errorlog.write('odd camera: ' + odd.message)
+  if even.camera is None or not even.camera.is_connected():
+    even.code = camera_thread.DISCONNECTED
+    even.message = 'Lost Connection to Camera'
+    errorlog.write('even camera: ' + even.message)
+  if odd.code == camera_thread.DISCONNECTED or even.code == camera_thread.DISCONNECTED:
+    manager.capturePage = 'focus-camera'
+    manager.transition.direction = 'left'
+    manager.current = 'debug'
 
 #########################################################################################
 
@@ -339,35 +377,50 @@ class ConfigureCameraScreen(Screen):
       if tooManyFound:
         self.cameraLabel.text = 'Too many cameras found. Disconnect until there are only two.'
         self.cameraNext.disabled = True
-        self.spinner.opacity = 1.0
+        self.searchingLayout.opacity = 1.0
+        self.foundLayout.opaicty = 0.0
       elif oddFound and evenFound:
-        self.cameraLabel.text = 'Found two cameras. Click next to continue.'
+        #self.cameraLabel.text = 'Found two cameras. Click next to continue.'
         self.cameraNext.disabled = False
-        self.spinner.opacity = 0.0
+        self.searchingLayout.opacity = 0.0
+        self.foundLayout.opacity = 1.0
       elif not oddFound and not evenFound:
         self.cameraLabel.text = 'No cameras found. Plug in or turn on the cameras.' + errorText
         self.cameraNext.disabled = True
-        self.spinner.opacity = 1.0
+        self.searchingLayout.opacity = 1.0
+        self.foundLayout.opacity = 0.0
       elif not oddFound:
         self.cameraLabel.text = 'Odd camera not found. Plug in or turn it on.' + errorText
         self.cameraNext.disabled = True
-        self.spinner.opacity = 1.0
+        self.searchingLayout.opacity = 1.0
+        self.foundLayout.opacity = 0.0
       elif not evenFound:
         self.cameraLabel.text = 'Even camera not found. Plug in or turn it on.' + errorText
         self.cameraNext.disabled = True
-        self.spinner.opacity = 1.0
+        self.searchingLayout.opacity = 1.0
+        self.foundLayout.opacity = 0.0
 
   def on_pre_enter(self):
     try:
       errorlog.openLog(self.manager.mountPoint)
-      loadConfig(self.manager.mountPoint)
       self.cameraLabel.text = 'Searching for cameras...'
-      self.cameraNext.disabled = True
+      if (odd.camera is None or
+          even.camera is None or
+          not odd.camera.is_connected() or
+          not even.camera.is_connected()):
+        self.cameraNext.disabled = True
+        self.searchingLayout.opacity = 1.0
+        self.foundLayout.opacity = 0.0
+      else:
+        self.cameraNext.disabled = False
+        self.searchingLayout.opacity = 0.0
+        self.foundLayout.opacity = 1.0
     except Exception as e:
       handleCrash(e)
 
   def next(self):
     try:
+      loadConfig(self.manager.mountPoint)
       configureSides()
       self.manager.transition.direction = 'left'
       self.manager.current = 'focus-camera'
@@ -430,19 +483,7 @@ class PreviewInside(GridLayout):
 class FocusCameraScreen(Screen):
   
   def update(self, dt):
-    # Proactively detect when cameras are disconnected or crash
-    if odd.camera is None or not odd.camera.is_connected():
-      odd.code = camera_thread.DISCONNECTED
-      odd.message = 'Lost Connection to Camera'
-      errorlog.write('odd camera: ' + odd.message)
-    if even.camera is None or not even.camera.is_connected():
-      even.code = camera_thread.DISCONNECTED
-      even.message = 'Lost Connection to Camera'
-      errorlog.write('even camera: ' + even.message)
-    if odd.code == camera_thread.DISCONNECTED or even.code == camera_thread.DISCONNECTED:
-      self.manager.capturePage = 'focus-camera'
-      self.manager.transition.direction = 'left'
-      self.manager.current = 'debug'
+    checkForDisconnected(self.manager)
 
   def on_pre_enter(self):
     try:
@@ -491,8 +532,8 @@ class FocusCameraScreen(Screen):
 
   def refocus(self):
     try:
-      odd.capture('/debug/preview-odd.jpg', True)
-      even.capture('/debug/preview-even.jpg', True)
+      odd.capture('/debug/preview-odd.jpg', camera_thread.LOCK_FOCUS)
+      even.capture('/debug/preview-even.jpg', camera_thread.LOCK_FOCUS)
       self.manager.capturePage = 'focus-camera'
       self.manager.transition.direction = 'left'
       self.manager.mustPreview = True
@@ -556,13 +597,62 @@ class PreviewWaitScreen(Screen):
     except Exception as e:
       handleCrash(e)
 
-#class CameraZoomScreen(Screen):
-#  def update(self, dt):
-#    pass
+#########################################################################################
 
-#class CameraWhiteScreen(Screen):
-#  def update(self, dt):
-#    pass
+class ZoomCameraScreen(Screen):
+  def update(self, dt):
+    checkForDisconnected(self.manager)
+
+  def on_pre_enter(self):
+    try:
+      loadConfig(self.manager.mountPoint)
+      self.updateControl(self.evenControl, even)
+      self.updateControl(self.oddControl, odd)
+
+      if self.manager.newPreview:
+        self.manager.newPreview = False
+        self.noPreviewLabel.opacity = 0.0
+        self.preview.opacity = 1.0
+      else:
+        self.noPreviewLabel.opacity = 1.0
+        self.preview.opacity = 0.0
+    except Exception as e:
+      handleCrash(e)
+
+  def updateControl(self, control, side):
+    text = '5'
+    for value in control.values:
+      if 'zoom' in side.config and side.config['zoom'] == value:
+        text = value
+    control.text = text
+    #control.option_cls.height = 32
+
+  def test(self):
+    try:
+      odd.config['zoom'] = self.oddControl.text
+      odd.camera.isReady = False
+      odd.capture('/debug/preview-odd.jpg', camera_thread.AUTO_FOCUS)
+      even.config['zoom'] = self.evenControl.text
+      even.camera.isReady = False
+      even.capture('/debug/preview-even.jpg', camera_thread.AUTO_FOCUS)
+      self.manager.capturePage = 'zoom-camera'
+      self.manager.mustPreview = True
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'capture-wait'
+    except Exception as e:
+      handleCrash(e)
+
+  def done(self):
+    try:
+      odd.config['zoom'] = self.oddControl.text
+      even.config['zoom'] = self.evenControl.text
+      odd.saveConfig(config)
+      even.saveConfig(config)
+      saveConfig(self.manager.mountPoint)
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'configure-camera'
+    except Exception as e:
+      handleCrash(e)
 
 #########################################################################################
 
@@ -588,19 +678,7 @@ class CaptureScreen(Screen):
     return True
 
   def update(self, dt):
-    # Proactively detect when cameras are disconnected or crash
-    if odd.camera is None or not odd.camera.is_connected():
-      odd.code = camera_thread.DISCONNECTED
-      odd.message = 'Lost Connection to Camera'
-      errorlog.write('odd camera: ' + odd.message)
-    if even.camera is None or not even.camera.is_connected():
-      even.code = camera_thread.DISCONNECTED
-      even.message = 'Lost Connection to Camera'
-      errorlog.write('even camera: ' + even.message)
-    if odd.code == camera_thread.DISCONNECTED or even.code == camera_thread.DISCONNECTED:
-      self.manager.capturePage = 'focus-camera'
-      self.manager.transition.direction = 'left'
-      self.manager.current = 'debug'
+    checkForDisconnected(self.manager)
 
   def on_pre_enter(self):
     try:
@@ -639,7 +717,7 @@ class CaptureScreen(Screen):
 
   def resetPages(self):
     pattern = re.compile('^([0-9]+)\.jpg$')
-    largest = 0
+    largest = -1
     # Search through all files in the directory
     filenames = os.listdir(self.manager.mountPoint + '/images')
     for name in filenames:
@@ -671,8 +749,8 @@ class CaptureScreen(Screen):
 
   def scanAt(self, pageNumber):
     if pageNumber is not None:
-      odd.capture(self.makeFile(pageNumber+1), False)
-      even.capture(self.makeFile(pageNumber), False)
+      odd.capture(self.makeFile(pageNumber+1), camera_thread.KEEP_FOCUS)
+      even.capture(self.makeFile(pageNumber), camera_thread.KEEP_FOCUS)
       self.manager.capturePage = 'capture'
       self.manager.mustPreview = False
       self.manager.transition.direction = 'left'

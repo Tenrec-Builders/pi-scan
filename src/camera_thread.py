@@ -5,6 +5,14 @@ COMPLETE = 1
 DISCONNECTED = 2
 FAILED = 3
 
+# Set AFL to 1
+LOCK_FOCUS = 0
+# Set AFL to 0
+AUTO_FOCUS = 1
+# Do not change AFL
+KEEP_FOCUS = 2
+
+
 class CameraResult:
   def __init__(self):
     self.scan = None
@@ -20,7 +28,7 @@ class CameraThread:
     self.camera = None
     self.resultEvent = Event()
     self.result = CameraResult()
-    self.shouldRefocus = True
+    self.shouldRefocus = LOCK_FOCUS
 
   def start(self):
     self.thread.start()
@@ -33,8 +41,10 @@ class CameraThread:
       refocusGood = True
       prepareGood = self.camera.prepare()
       if prepareGood:
-        if self.shouldRefocus:
+        if self.shouldRefocus == LOCK_FOCUS:
           refocusGood = self.camera.refocus()
+        elif self.shouldRefocus == AUTO_FOCUS:
+          refocusGood = self.camera.unlockFocus()
         if not refocusGood:
           result.scan = None
           result.message = 'Failed to refocus: ' + self.camera.message

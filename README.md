@@ -9,6 +9,7 @@ Pi Scan is a simple and robust camera controller for book scanners. It was desig
 * Three 4GB SD Cards (2 for cameras, 1 for Pi). One needs to be micro (for the Pi). The other two need to be standard sized or have adapters.
 * SD Card Reader
 * Fast SD Card for storing scans
+* Mouse, Screen, Optional Keyboard
 
 # Download
 
@@ -20,6 +21,8 @@ Two models of cameras are supported. Download the appropriate image for your cam
 
 * [Canon PowerShot A2500 Image](http://tenrec.builders/pi-scan/latest/pi-scan-camera-a2500-latest.zip)
 * [Canon PowerShot ELPH/IXUS 160 image](http://tenrec.builders/pi-scan/latest/pi-scan-camera-elph160-latest.zip)
+
+Use these images at your own risk. These images may damage your camera. During early testing of the ELPH 160 image, one camera was bricked and the root cause of this problem was never definitively found. See [this link](http://chdk.setepontoss.com/index.php?topic=12321.140).
 
 # Installation
 
@@ -51,7 +54,8 @@ There are many camera settings which are not yet user-configurable. These settin
 
 # Version Notes
 
-0.4 -- Detect when the /debug and /images directories fail to get created and note the problem in the storage screen.
-0.3 -- Add more crash detection and a screen which displays the error in case of unexpected exceptions
-0.2 -- Fix issues with spaces in path names and when writing error logs.
-0.1 -- Initial release
+- 0.5 -- Fixed page numbering issues. Added zoom adjustment UI.
+- 0.4 -- Detect when the /debug and /images directories fail to get created and note the problem in the storage screen.
+- 0.3 -- Add more crash detection and a screen which displays the error in case of unexpected exceptions
+- 0.2 -- Fix issues with spaces in path names and when writing error logs.
+- 0.1 -- Initial release

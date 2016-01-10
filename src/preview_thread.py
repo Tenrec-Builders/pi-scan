@@ -3,6 +3,7 @@ from PIL import Image as PillowImage
 import cStringIO as StringIO
 from kivy.core.image import ImageData as CoreImageData
 from kivy.graphics.texture import Texture
+#from jpegtran import JPEGImage
 import math
 import errorlog
 
@@ -75,17 +76,22 @@ class PreviewThread:
       result.message = 'Failed to load image'
       stream = StringIO.StringIO(raw)
       full = PillowImage.open(stream)
+      #full = JPEGImage(blob=raw)
 
       # Rotate the full image for preview
       if self.position == 'odd':
         full = full.transpose(PillowImage.ROTATE_90)
+        #full = full.rotate(90)
       elif self.position == 'even':
         full = full.transpose(PillowImage.ROTATE_270)
+        #full = full.rotate(-90)
 
       # Set size parameters based on the full image
-      result.message = 'Failed to calculate size parameters'
+      #result.message = 'Failed to calculate size parameters'
       result.width = full.size[0]
+      #result.width = full.width
       result.height = full.size[1]
+      #result.height = full.height
       result.columnCount = int(math.ceil(result.width / 2000.0))
       rowCount = int(math.ceil(result.height / 2000.0))
 
@@ -95,6 +101,11 @@ class PreviewThread:
       for y in xrange(rowCount-1, -1, -1):
         for x in xrange(result.columnCount-1, -1, -1):
           result.message = 'Failed to crop base image'
+          #width = min(result.width - x*2000, 2000)
+          #height = min(result.height - y*2000, 2000)
+          #croppedJpeg = full.crop(x*2000, y*2000, width, height)
+          #stream = StringIO.StringIO(croppedJpeg.as_blob())
+          #cropped = PillowImage.open(stream)
           right = min((x+1)*2000, result.width)
           lower = min((y+1)*2000, result.height)
           cropBox = (x*2000, y*2000, right, lower)

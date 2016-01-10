@@ -88,76 +88,54 @@
 
 ###################################################################################
 
-<ConfigureFolderScreen>:
-  folderLabel: folder_label
-  name: 'configure-folder'
-  BoxLayout:
-    orientation: 'vertical'
-    size_hint: (0.9, 0.5)
-    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-    spacing: 20
-
-    Label:
-      size_hint: (1, 0.1)
-      id: folder_label
-      font_size: 36
-      markup: True
-      text: 'Current Scan Folder is [color=999999]/[/color]'
-
-    Button:
-      id: change_folder
-      size_hint: (0.4, 0.1)
-      pos_hint: {'center_x': 0.5}
-      text: 'Change Scan Folder'
-
-  RelativeLayout:
-    size_hint: (1, 0.15)
-    pos_hint: {'center_x': 0.5}
-    AnchorLayout:
-      anchor_x: 'right'
-      anchor_y: 'bottom'
-      Button:
-        size_hint: (0.2, 1)
-        text: 'Next'
-        on_press:
-          root.manager.transition.direction = 'left'
-          root.manager.current = 'configure-camera'
-    AnchorLayout:
-      anchor_x: 'left'
-      anchor_y: 'bottom'
-      Button:
-        size_hint: (0.2, 1)
-        text: 'Back'
-        on_press:
-          root.manager.transition.direction = 'right'
-          root.manager.current = 'configure-disk'
-
-###################################################################################
-
 <ConfigureCameraScreen>:
   cameraLabel: camera_label
   cameraNext: camera_next
-  spinner: spinner
+  searchingLayout: searching_layout
+  foundLayout: found_layout
   name: 'configure-camera'
-  BoxLayout:
-    orientation: 'vertical'
-    size_hint: (0.9, 0.9)
-    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+  RelativeLayout:
+    id: searching_layout
+    BoxLayout:
+      orientation: 'vertical'
+      size_hint: (0.9, 0.9)
+      pos_hint: {'center_x': 0.5, 'center_y': 0.5}
 
-    Label:
-      id: camera_label
-      text_size: self.size
-      halign: 'center'
-      valign: 'middle'
-      font_size: 36
-      markup: True
-      text: 'Searching for cameras...'
-    Image:
-      id: spinner
-      width: 66
-      height: 66
-      source: 'spinner.gif'
-      anim_delay: 1.0/6.0
+      Label:
+        id: camera_label
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        font_size: 36
+        markup: True
+        text: 'Searching for cameras...'
+      Image:
+        id: spinner
+        width: 66
+        height: 66
+        source: 'spinner.gif'
+        anim_delay: 1.0/6.0
+
+  RelativeLayout:
+    id: found_layout
+    BoxLayout:
+      orientation: 'vertical'
+      size_hint: (0.9, 0.9)
+      pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+      Label:
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        font_size: 36
+        markup: True
+        text: 'Found two cameras. Click next to continue.'
+      Button:
+        size_hint: 0.3, 0.2
+        pos_hint: {'center_x': 0.5}
+        text: 'Adjust Camera Zoom'
+        on_press:
+          root.manager.transition.direction = 'left'
+          root.manager.current = 'zoom-camera'
 
   RelativeLayout:
     size_hint: (1, 0.15)
@@ -180,6 +158,85 @@
         on_press:
           root.manager.transition.direction = 'right'
           root.manager.current = 'configure-disk'
+
+###################################################################################
+
+<ZoomCameraScreen>:
+  preview: preview
+  noPreviewLabel: no_preview_label
+  evenControl: even_control
+  oddControl: odd_control
+  name: 'zoom-camera'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint: (0.9, 0.85)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+    spacing: 10
+
+    RelativeLayout:
+      size_hint: (1, 0.1)
+      AnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'top'
+        Label:
+          size_hint: (1, 1)
+          text_size: self.size
+          halign: 'center'
+          valign: 'middle'
+          font_size: 18
+          text: 'Even <-- Zoom --> Odd'
+      AnchorLayout:
+        anchor_x: 'left'
+        anchor_y: 'top'
+        Spinner:
+          size_hint: (0.3, 1)
+          id: even_control
+          text: '5'
+          values: ('Min Zoom', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Max Zoom')  
+      AnchorLayout:
+        anchor_x: 'right'
+        anchor_y: 'top'
+        Spinner:
+          size_hint: (0.3, 1)
+          text: '5'
+          id: odd_control
+          values: ('Min Zoom', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Max Zoom')  
+    PreviewOutside:
+      id: preview
+      size_hint: (1, 0.95)
+
+  RelativeLayout:
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'center'
+      Label:
+        id: no_preview_label
+        size_hint: (1, 0.5)
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        font_size: 36
+        text: 'Pick a Zoom Level and tap Test Shot to see what it looks like.'
+
+  RelativeLayout:
+    size_hint: (1, 0.15)
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'bottom'
+      Button:
+        id: camera_next
+        size_hint: (0.2, 1)
+        text: 'Done'
+        on_press:
+          root.done()
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      Button:
+        size_hint: (0.2, 1)
+        text: 'Test Shot'
+        on_press:
+          root.test()
 
 ###################################################################################
 
@@ -287,8 +344,6 @@
     do_collide_after_children: False
     do_rotation: False
     auto_bring_to_front: False
-    #scale_max: 1
-    #scale_min: 0.1
     BoxLayout:
       orientation: 'horizontal'
       size_hint: (1, 0.8)
@@ -306,7 +361,7 @@
           size_hint: (1, 0.05)
           text: 'Even Page'
         PreviewInside:
-          id: odd
+          id: even
       BoxLayout:
         orientation: 'vertical'
         size_hint: (0.5, 1)
@@ -319,7 +374,7 @@
           size_hint: (1, 0.05)
           text: 'Odd Page'
         PreviewInside:
-          id: even
+          id: odd
   AnchorLayout:
     anchor_x: 'right'
     anchor_y: 'top'
@@ -345,31 +400,7 @@
   size_hint_y: 1.0
   size_hint_x: None
   pos_hint: { 'center_x': 0.5 }
-  #size_hint_x: 1.0
-  #size_hint_y: None
-  #height: self.width * 3240.0/4320.0
-  #width: self.height * 4320.0 / 3240.0
   cols: 3
-  #size_hint: (3240.0/4320.0, 1.0)
-  #cols: 3
-  #Image:
-  #  size_hint: (2000.0/4320.0, 2000.0/3240.0)
-  #  source: 'test/even-1.jpg'
-  #Image:
-  #  size_hint: (2000.0/4320.0, 2000.0/3240.0)
-  #  source: 'test/even-2.jpg'
-  #Image:
-  #  size_hint: (320.0/4320.0, 2000.0/3240.0)
-  #  source: 'test/even-3.jpg'
-  #Image:
-  #  size_hint: (2000.0/4320.0, 1240.0/3240.0)
-  #  source: 'test/even-4.jpg'
-  #Image:
-  #  size_hint: (2000.0/4320.0, 1240.0/3240.0)
-  #  source: 'test/even-5.jpg'
-  #Image:
-  #  size_hint: (320.0/4320.0, 1240.0/3240.0)
-  #  source: 'test/even-6.jpg'
 
 ###################################################################################
 
@@ -441,45 +472,6 @@
 
 ###################################################################################
 
-#<CameraFocusScreen>:
-#  name: 'camera-focus'
-#  BoxLayout:
-#    orientation: 'vertical'
-#    size_hint: (0.9, 0.5)
-#    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-#    spacing: 20
-#
-#    Label:
-#      size_hint: (1, 0.1)
-#      font_size: 36
-#      text: 'Press two pages full of text against the glass to find the focus point.'
-#
-#    Button:
-#      size_hint: (0.4, 0.1)
-#      pos_hint: {'center_x': 0.5}
-#      text: 'Refocus'
-#
-#  RelativeLayout:
-#    size_hint: (1, 0.15)
-#    AnchorLayout:
-#      anchor_x: 'right'
-#      anchor_y: 'bottom'
-#      Button:
-#        size_hint: (0.2, 1)
-#        text: 'Next'
-#        on_press:
-#          root.manager.current = 'capture'
-#    AnchorLayout:
-#      anchor_x: 'left'
-#      anchor_y: 'bottom'
-#      Button:
-#        size_hint: (0.2, 1)
-#        text: 'Back'
-#        on_press:
-#          root.manager.current = 'configure-camera'
-
-###################################################################################
-
 <CaptureWaitScreen>:
   name: 'capture-wait'
   BoxLayout:
@@ -509,6 +501,8 @@
         on_press:
           exit()
 
+###################################################################################
+
 <PreviewWaitScreen>:
   name: 'preview-wait'
   BoxLayout:
@@ -537,6 +531,8 @@
         text: 'Restart Pi Scan'
         on_press:
           exit()
+
+###################################################################################
 
 <CaptureFailScreen>:
   evenLabel: even_label
@@ -584,6 +580,8 @@
         on_press:
           exit()
 
+###################################################################################
+
 <CrashScreen>:
   name: 'crash'
   errorLabel: error_label
@@ -602,6 +600,8 @@
       text: 'Restart Pi Scan'
       on_press:
         root.restart()
+
+###################################################################################
 
 <DebugScreen>:
   evenStatus: even_status
@@ -709,14 +709,13 @@
           on_press:
             exit()
 
+###################################################################################
 
 <ScanRoot>:
   StartScreen:
   ConfigureDiskScreen:
-  ConfigureFolderScreen:
-  #ChangeFolderScreen:
-  #NewFolderScreen:
   ConfigureCameraScreen:
+  ZoomCameraScreen:
   FocusCameraScreen:
   CaptureScreen:
   CaptureWaitScreen:
