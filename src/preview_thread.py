@@ -80,11 +80,11 @@ class PreviewThread:
 
       # Rotate the full image for preview
       if self.position == 'odd':
-        full = full.transpose(PillowImage.ROTATE_90)
-        #full = full.rotate(90)
-      elif self.position == 'even':
         full = full.transpose(PillowImage.ROTATE_270)
         #full = full.rotate(-90)
+      elif self.position == 'even':
+        full = full.transpose(PillowImage.ROTATE_90)
+        #full = full.rotate(90)
 
       # Set size parameters based on the full image
       #result.message = 'Failed to calculate size parameters'

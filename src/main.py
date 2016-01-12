@@ -11,7 +11,7 @@ from kivy.graphics.transformation import Matrix
 import camera_thread, stick, camera, preview, errorlog
 import os, json, string, re, traceback, errno
 
-version = '0.5'
+version = '0.6'
 
 odd = None
 even = None
@@ -656,6 +656,8 @@ class ZoomCameraScreen(Screen):
 
 #########################################################################################
 
+#screenshotCount = 0
+
 class CaptureScreen(Screen):
   def __init__(self, a=1.0, **kwargs):
     super(CaptureScreen, self).__init__(**kwargs)
@@ -665,6 +667,12 @@ class CaptureScreen(Screen):
     
   def on_key_down(self, window, scancode, codepoint, key, other):
     try:
+      #if key == '=':
+      #  global screenshotCount
+      #  filename = 'screenshot%d.png' % screenshotCount
+      #  Window.screenshot(name=filename)
+      #  print filename
+      #  screenshotCount += 1
       if self.manager.current == 'capture':
         if (key == 's' or
             key == 'c' or
