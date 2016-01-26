@@ -42,6 +42,7 @@
 <ConfigureDiskScreen>:
   diskStatus: disk_status
   diskNext: disk_next
+  upgradeButton: upgrade_button
   spinner: spinner
   name: 'configure-disk'
   BoxLayout:
@@ -64,14 +65,14 @@
       anim_delay: 1.0/6.0
 
   RelativeLayout:
-    size_hint: (1, 0.15)
-    pos_hint: {'center_x': 0.5}
+    size_hint: (1, 1)
+    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
     AnchorLayout:
       anchor_x: 'right'
       anchor_y: 'bottom'
       Button:
         id: disk_next
-        size_hint: (0.2, 1)
+        size_hint: (0.2, 0.15)
         text: 'Next'
         on_press:
           root.manager.transition.direction = 'left'
@@ -80,11 +81,20 @@
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
-        size_hint: (0.2, 1)
+        size_hint: (0.2, 0.15)
         text: 'Back'
         on_press:
           root.manager.transition.direction = 'right'
           root.manager.current = 'start'
+    AnchorLayout:
+      anchor_x: 'right'
+      anchor_y: 'top'
+      Button:
+        id: upgrade_button
+        size_hint: (0.2, 0.15)
+        text: 'Upgrade'
+        on_press:
+          root.ugrade()
 
 ###################################################################################
 
@@ -120,7 +130,7 @@
     id: found_layout
     BoxLayout:
       orientation: 'vertical'
-      size_hint: (0.9, 0.9)
+      size_hint: (1.0, 1.0)
       pos_hint: {'center_x': 0.5, 'center_y': 0.5}
       Label:
         text_size: self.size
@@ -136,6 +146,15 @@
         on_press:
           root.manager.transition.direction = 'left'
           root.manager.current = 'zoom-camera'
+      AnchorLayout:
+        size_hint: 0.2, 0.15
+        anchor_x: 'right'
+        anchor_y: 'top'
+        Button:
+          text: 'Debug Cameras'
+          on_press:
+            root.manager.transition.direction = 'left'
+            root.manager.current = 'debug'
 
   RelativeLayout:
     size_hint: (1, 0.15)
@@ -409,6 +428,7 @@
   captureButton: capture
   rescanButton: rescan
   previewButton: preview_button
+  captureLabel: capture_label
   name: 'capture'
   BoxLayout:
     orientation: 'vertical'
@@ -421,7 +441,7 @@
       text_size: self.size
       halign: 'center'
       valign: 'middle'
-      id: camera_label
+      id: capture_label
       font_size: 24
       text: 'Ready For Capture'
 
@@ -621,7 +641,7 @@
       text_size: self.size
       halign: 'center'
       valign: 'middle'
-      text: 'Camera Crashed.'
+      text: 'Camera Crashed. Turn camera(s) back on and click ok.'
     BoxLayout:
       size_hint: (1.0, 0.2)
       orientation: 'horizontal'

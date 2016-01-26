@@ -29,7 +29,7 @@ Two models of cameras are supported. Download the appropriate image for your cam
 * [Canon PowerShot A2500 Image](http://tenrec.builders/pi-scan/latest/pi-scan-camera-a2500-latest.zip)
 * [Canon PowerShot ELPH/IXUS 160 image](http://tenrec.builders/pi-scan/latest/pi-scan-camera-elph160-latest.zip)
 
-Use these images at your own risk. These images may damage your camera. During early testing of the ELPH 160 image, one camera was bricked and the root cause of this problem was never definitively found. See [this link](http://chdk.setepontoss.com/index.php?topic=12321.140).
+Use these images at your own risk. These images may damage your camera. During early testing of the ELPH 160 image, one camera was bricked and the root cause of this problem was never definitively found. See [this link](http://chdk.setepontos.com/index.php?topic=12321.140).
 
 # Installation
 
@@ -127,6 +127,7 @@ Pi Scan does just one part of the overall scanning workflow: managing capture. A
 
 # Version Notes
 
+- 0.7 -- Added page numbers during capture. Fixed ISO and shutter speed settings. Attempt to fix camera crashes when entering alt mode. Add Pi Scan crash detection for preview and camera threads.
 - 0.6 -- Fixed preview rotation. Images were being shown upside down.
 - 0.5 -- Fixed page numbering issues. Added zoom adjustment UI.
 - 0.4 -- Detect when the /debug and /images directories fail to get created and note the problem in the storage screen.

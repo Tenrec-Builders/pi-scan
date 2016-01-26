@@ -8,10 +8,10 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics.transformation import Matrix
-import camera_thread, stick, camera, preview, errorlog
+import camera_thread, stick, camera, preview, errorlog, preview_thread
 import os, json, string, re, traceback, errno
 
-version = '0.6'
+version = '0.7'
 
 odd = None
 even = None
@@ -41,7 +41,6 @@ class CameraSide:
 
   def reset(self, info):
     self.serial = info.serial_num
-    self.config = {}
     self.camera = camera.Camera(info, self.config)
     self.camera.position = self.position
     self.camera.connect()
@@ -288,6 +287,8 @@ class ConfigureDiskScreen(Screen):
         self.diskStatus.text = 'Could not mount drive. Try removing and re-inserting it.'
         self.diskNext.disabled = True
         self.spinner.opacity = 1.0
+        self.upgradeButton.opacity = 0.0
+        self.upgradeButton.disabled = True
       else:
         self.manager.mountPoint = string.strip(mountPoint.encode('ascii'), '\0')
         failMessage = self.makeDirs()
@@ -295,19 +296,31 @@ class ConfigureDiskScreen(Screen):
           self.diskStatus.text = 'Storage Found. Click next to continue.'
           self.diskNext.disabled = False
           self.spinner.opacity = 0.0
+          if self.getUpgrade() is not None:
+            self.upgradeButton.opacity = 1.0
+            self.upgradeButton.disabled = False
+          else:
+            self.upgradeButton.opacity = 0.0
+            self.upgradeButton.disabled = True
         else:
           self.diskStatus.text = 'Storage Error: ' + failMessage
           self.diskNext.disabled = True
           self.spinner.opacity = 1.0
+          self.upgradeButton.opacity = 0.0
+          self.upgradeButton.disabled = True
     else:
       self.diskStatus.text = '[color=ff3333]Multiple Drives Found.[/color] Disconnect all but one drive to continue.'
       self.diskNext.disabled = True
       self.spinner.opacity = 1.0
+      self.upgradeButton.opacity = 0.0
+      self.upgradeButton.disabled = True
 
   def on_pre_enter(self):
     try:
       self.diskStatus.text = 'Searching for storage...'
       self.diskNext.disabled = True
+      self.upgradeButton.opacity = 0.0
+      self.upgradeButton.disabled = True
     except Exception as e:
       handleCrash(e)
 
@@ -329,6 +342,45 @@ class ConfigureDiskScreen(Screen):
     if e.errno != errno.EEXIST:
       result = e.strerror
     return result
+
+  def getUpgrade(self):
+    result = None
+    versionPattern = re.compile('^([0-9]+)\.([0-9]+)$')
+    match = versionPattern.search(version)
+    versionMajor = int(match.group(1))
+    versionMinor = int(match.group(2))
+    largestMajor = versionMajor
+    largestMinor = versionMinor
+    pattern = re.compile('^pi-scan-update-([0-9]+)\.([0-9]+)\.archive$')
+    filenames = os.listdir(self.manager.mountPoint)
+    for name in filenames:
+      match = pattern.search(name)
+      if match:
+        major = int(match.group(1))
+        minor = int(match.group(2))
+        if (major > largestMajor or
+            major == largestMajor and minor > largestMinor):
+          largestMajor = major
+          largestMinor = minor
+    if (largestMajor > versionMajor or
+        largestMajor == versionMajor and largestMinor > versionMinor):
+      result = (self.manager.mountPoint + '/' +
+                'pi-scan-update-' + str(largestMajor) + '.' + str(largestMinor) +
+                '.archive')
+    return result
+
+  def upgrade(self):
+    try:
+      upgradeFile = self.getUpgrade()
+      if upgradeFile is not None:
+        self.upgradeButton.disabled = True
+        os.system('sudo mount -o remount,rw /')
+        os.system('unzip ' + upgradeFile + ' -d /home_org/pi/')
+        os.system('sudo mount -o remount,ro /')
+        os.system('unzip ' + upgradeFile + ' -d /home/pi/')
+        os.system('sudo reboot')
+    except Exception as e:
+      handleCrash(e)
 
 #########################################################################################
 
@@ -556,10 +608,17 @@ class FocusCameraScreen(Screen):
 class CaptureWaitScreen(Screen):
 
   def update(self, dt):
+    global hasCrashed, crashMessage
     oddDone = odd.update()
     evenDone = even.update()
     if oddDone and evenDone:
-      if (odd.code == camera_thread.COMPLETE and
+      if odd.code == camera_thread.CRASHED:
+        crashMessage = odd.message
+        hasCrashed = True
+      elif even.code == camera_thread.CRASHED:
+        crashMessage = even.message
+        hasCrashed = True
+      elif (odd.code == camera_thread.COMPLETE and
           even.code == camera_thread.COMPLETE):
         self.manager.newCapture = True
         odd.save(self.manager.mountPoint)
@@ -580,15 +639,23 @@ class CaptureWaitScreen(Screen):
 class PreviewWaitScreen(Screen):
 
   def update(self, dt):
+    global hasCrashed, crashMessage
     oddDone = odd.updatePreview()
     evenDone = even.updatePreview()
     if oddDone and evenDone:
-      dest = self.manager.get_screen(self.manager.capturePage)
-      odd.showPreview(dest.preview.odd)
-      even.showPreview(dest.preview.even)
-      self.manager.newPreview = True
-      self.manager.transition.direction = 'left'
-      self.manager.current = self.manager.capturePage
+      if odd.preview.result.code == preview_thread.CRASHED:
+        crashMessage = odd.preview.result.message
+        hasCrashed = True
+      elif even.preview.result.code == preview_thread.CRASHED:
+        crashMessage = even.preview.result.message
+        hasCrashed = True
+      else:
+        dest = self.manager.get_screen(self.manager.capturePage)
+        odd.showPreview(dest.preview.odd)
+        even.showPreview(dest.preview.even)
+        self.manager.newPreview = True
+        self.manager.transition.direction = 'left'
+        self.manager.current = self.manager.capturePage
 
   def on_enter(self):
     try:
@@ -696,6 +763,9 @@ class CaptureScreen(Screen):
             even.code == camera_thread.COMPLETE):
           self.lastEvenPage = self.nextEvenPage
           self.nextEvenPage += 2
+          self.captureLabel.text = 'Captured Pages ' + str(self.lastEvenPage) + ', ' + str(self.lastEvenPage + 1)
+        else:
+          self.captureLabel.text = 'Ready For Capture'
         odd.code = camera_thread.COMPLETE
         even.code = camera_thread.COMPLETE
 
@@ -842,7 +912,7 @@ class DebugScreen(Screen):
     elif side.code == camera_thread.DISCONNECTED:
       message.text = 'Crashed: ' + side.message
 
-    if side.code == camera_thread.DISCONNECTED and found:
+    if found:
       log.disabled = False
     else:
       log.disabled = True

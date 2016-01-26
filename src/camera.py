@@ -77,11 +77,11 @@ class Camera:
 
   def prepare_mode(self):
     self.message = 'Error while checking record mode'
-    if self.device.mode != 'record':
-      self.message = 'Error while switching to record mode'
-      self.device.switch_mode('record')
+    #if self.device.mode != 'record':
+    self.message = 'Error while switching to record mode'
+    self.device.switch_mode('record')
     self.message = 'Error while entering CHDK alt mode'
-    self.device.lua_execute('enter_alt(); sleep(50);', do_return=False)
+    self.device.lua_execute('sleep(50); enter_alt(); sleep(50);', do_return=False)
     self.message = 'Error while switching to P mode'
     self.device.lua_execute('set_capture_mode(2);sleep(50);', do_return=False)
 
@@ -192,7 +192,8 @@ class Camera:
         data = self.shoot(self.makeOptions())
         if data:
           result = data
-          self.device.lua_execute('enter_alt(); sleep(50);', do_return=False)
+          self.message = 'Failed while re-entering alt mode'
+          self.device.lua_execute('sleep(50); enter_alt(); sleep(50);', do_return=False)
         else:
           self.message = 'Got empty data back when capturing'
           self.log(self.message)
@@ -208,8 +209,8 @@ class Camera:
 
   def makeOptions(self):
     options = {}
-    options['svm'] = 80
-    options['shutter_speed'] = chdkptp.util.shutter_to_tv96(0.1)
+    options['svm'] = chdkptp.util.iso_to_sv96(100)
+    options['tv'] = chdkptp.util.shutter_to_tv96(1/10.0)
     options['nd'] = 2
     options['fformat'] = 1
     luaOptions = self.device._lua.table(**options)

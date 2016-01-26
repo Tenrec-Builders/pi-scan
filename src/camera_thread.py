@@ -4,6 +4,7 @@ WAITING = 0
 COMPLETE = 1
 DISCONNECTED = 2
 FAILED = 3
+CRASHED = 4
 
 # Set AFL to 1
 LOCK_FOCUS = 0
@@ -34,41 +35,47 @@ class CameraThread:
     self.thread.start()
 
   def loop(self):
-    while True:
-      self.waitToCapture()
+    try:
+      while True:
+        self.waitToCapture()
 
-      result = CameraResult()
-      refocusGood = True
-      prepareGood = self.camera.prepare()
-      if prepareGood:
-        if self.shouldRefocus == LOCK_FOCUS:
-          refocusGood = self.camera.refocus()
-        elif self.shouldRefocus == AUTO_FOCUS:
-          refocusGood = self.camera.unlockFocus()
-        if not refocusGood:
-          result.scan = None
-          result.message = 'Failed to refocus: ' + self.camera.message
-          result.code = FAILED
-          if not self.camera.is_connected():
-            result.code = DISCONNECTED
-        else:
-          scan = self.camera.capture()
-          if scan is None:
+        result = CameraResult()
+        refocusGood = True
+        prepareGood = self.camera.prepare()
+        if prepareGood:
+          if self.shouldRefocus == LOCK_FOCUS:
+            refocusGood = self.camera.refocus()
+          elif self.shouldRefocus == AUTO_FOCUS:
+            refocusGood = self.camera.unlockFocus()
+          if not refocusGood:
             result.scan = None
-            result.message = 'Failed to capture: ' + self.camera.message
+            result.message = 'Failed to refocus: ' + self.camera.message
             result.code = FAILED
             if not self.camera.is_connected():
               result.code = DISCONNECTED
           else:
-            result.scan = scan
-            result.message = ''
-            result.code = COMPLETE
-      else:
-        result.scan = None
-        result.message = 'Failed to prepare camera: ' + self.camera.message
-        result.code = FAILED
-        if not self.camera.is_connected():
-          result.code = DISCONNECTED
+            scan = self.camera.capture()
+            if scan is None:
+              result.scan = None
+              result.message = 'Failed to capture: ' + self.camera.message
+              result.code = FAILED
+              if not self.camera.is_connected():
+                result.code = DISCONNECTED
+            else:
+              result.scan = scan
+              result.message = ''
+              result.code = COMPLETE
+        else:
+          result.scan = None
+          result.message = 'Failed to prepare camera: ' + self.camera.message
+          result.code = FAILED
+          if not self.camera.is_connected():
+            result.code = DISCONNECTED
+        self.setResult(result)
+    except Exception as e:
+      result = CameraResult()
+      result.code = CRASHED
+      result.message = 'Crash Log for ' + self.camera.position + ' Camera Thread: ' + str(e) + ': ' + str(e.args) + ':\n' + traceback.format_exc()
       self.setResult(result)
 
   # Interface for outside to trigger capture and get the result

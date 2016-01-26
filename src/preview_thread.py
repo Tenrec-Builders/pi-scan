@@ -10,6 +10,7 @@ import errorlog
 WAITING = 0
 COMPLETE = 1
 FAILED = 3
+CRASHED = 4
 
 class PreviewResult:
   def __init__(self):
@@ -35,16 +36,22 @@ class PreviewThread:
     self.thread.start()
 
   def loop(self):
-    while True:
-      self.waitToProcess()
+    try:
+      while True:
+        self.waitToProcess()
 
+        result = PreviewResult()
+        if self.raw:
+          result = self.process(self.raw)
+        else:
+          result.code = FAILED
+          result.message = 'No Image Found to Process'
+
+        self.setResult(result)
+    except Exception as e:
       result = PreviewResult()
-      if self.raw:
-        result = self.process(self.raw)
-      else:
-        result.code = FAILED
-        result.message = 'No Image Found to Process'
-
+      result.code = CRASHED
+      result.message = 'Crash Log for Preview Thread: ' + str(e) + ': ' + str(e.args) + ':\n' + traceback.format_exc()
       self.setResult(result)
 
   def beginPreview(self, raw):
