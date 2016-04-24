@@ -9,20 +9,23 @@ def search():
   listDevices = udisks.get_dbus_method('GetManagedObjects')
   result = []
   for key, value in listDevices().items():
-    if ('org.freedesktop.UDisks2.Block' in value and
-        'org.freedesktop.UDisks2.Filesystem' in value):
-      block = value['org.freedesktop.UDisks2.Block']
-      drive = dbus.Interface(
-        bus.get_object('org.freedesktop.UDisks2',
-                       block['Drive']),
-        'org.freedesktop.UDisks2.Drive')
-      driveprop = dbus.Interface(
-        drive,
-        'org.freedesktop.DBus.Properties')
-      busType = driveprop.Get('org.freedesktop.UDisks2.Drive',
-                              'ConnectionBus')
-      if busType == 'usb':
-        result.append(Stick(key))
+    try:
+      if ('org.freedesktop.UDisks2.Block' in value and
+          'org.freedesktop.UDisks2.Filesystem' in value):
+        block = value['org.freedesktop.UDisks2.Block']
+        drive = dbus.Interface(
+          bus.get_object('org.freedesktop.UDisks2',
+                         block['Drive']),
+          'org.freedesktop.UDisks2.Drive')
+        driveprop = dbus.Interface(
+          drive,
+          'org.freedesktop.DBus.Properties')
+        busType = driveprop.Get('org.freedesktop.UDisks2.Drive',
+                                'ConnectionBus')
+        if busType == 'usb':
+          result.append(Stick(key))
+    except Exception as e:
+      pass
   return result
 
 def searchAndUnmount(shouldForce):

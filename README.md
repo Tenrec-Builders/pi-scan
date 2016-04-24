@@ -4,25 +4,48 @@ Pi Scan is a simple and robust camera controller for book scanners. It was desig
 
 # Requirements
 
-* Raspberry Pi 2
+* Raspberry Pi 2 or Raspberry Pi 3
 * Two cameras (Canon PowerShot A2500 or Canon PowerShot ELPH 160 (aka IXUS 160))
 * Three 4GB SD Cards (2 for cameras, 1 for Pi). One needs to be micro (for the Pi). The other two need to be standard sized or have adapters.
-* Mouse, Screen, Optional Keyboard
+* USB Storage device (either an SD Card Reader and fast SD Card or a thumb drive)
+* Input Devices (see below
 
-Plus either
+# Input Device Options
 
-* SD Card Reader
-* Fast SD Card for storing scans
+If at all possible, avoid using a USB hub. A significant chunk of issues that users have reported ended up being caused by some issue with a USB hub that was resolved when plugging devices into the Raspberry Pi directly.
 
-Or
+One known issue is that USB input devices only work if they are plugged in before Pi Scan starts. If you plug them in later on or if they get unplugged, then you will have to restart Pi Scan to get them to work.
 
-* USB Thumb Drive
+## Mouse
+
+Pi Scan can be controlled entirely via a mouse and HDMI screen. This option is incompatible with touch but works with all other kinds of input. If you intend to use a mouse, download the mouse-compatible image of Pi Scan below.
+
+## Touch Screen
+
+Pi Scan works with the official Raspberry Pi touch screen. This provides a more compact and self-contained scanner appliance. The touch option is incompatible with mouse input. If you want to use a touch screen, download the touchscreen-compatible image of Pi Scan.
+
+## Keyboard
+
+Pi Scan can now be controlled entirely via a keyboard. Every button has a hotkey shown, usually a number. The keyboard works with both the touch screen and mouse versions of Pi Scan. To navigate previews with a keyboard, use '+', '-', and '0' to set the zoom level and move the viewport with WASD or the arrow keys. When scanning, use the space bar, 'b' or 'c' to capture.
+
+## USB Foot Pedal
+
+Most cheap USB foot pedals emulate a keyboard and send the 'b' key by default. Because the 'b' key is a hot key for capture, USB foot pedals can be used to trigger page capture.
+
+## Industrial Foot Pedal
+
+Industrial foot pedals are more robust than equivalently priced USB foot pedals. But they don't have the electronics to deal with the USB protocol. They can be wired up to two pins on the Raspberry Pi and Pi Scan will treat any connection between those pins as a trigger for capture when scanning. Note that this will only capture images on the scanning screen, not when setting focus, zoom level, or shutter speed. For details, refer to the Archivist Quill [assembly manual](http://tenrec.builders/quill/guide/electronics/pedal/).
+
+## Buttons and Microswitches
+
+Any electrical connection between the GPIO21 and GND pins on the Raspberry Pi will cause a capture when scanning. So any button or microswitch can work as a scanning trigger if it is wired up properly.
 
 # Download
 
 Raspberry Pi 2 (for use with mouse):
 
 * [Raspberry Pi 2 Image (for mouse)](http://tenrec.builders/pi-scan/latest/pi-scan-latest-mouse.zip)
+* [Raspberry Pi 2 Image (for touchscreen)](http://tenrec.builders/pi-scan/latest/pi-scan-latest-touch.zip)
 
 Two models of cameras are supported. Download the appropriate image for your camera:
 
@@ -127,6 +150,7 @@ Pi Scan does just one part of the overall scanning workflow: managing capture. A
 
 # Version Notes
 
+- 1.0 -- Added shutter speed adjustment, support for trigger via GPIO pins, full keyboard support, touch screen support, an upgrade mechanism, beep on error, focus when zooming, many crashes, and more.
 - 0.7 -- Added page numbers during capture. Fixed ISO and shutter speed settings. Attempt to fix camera crashes when entering alt mode. Add Pi Scan crash detection for preview and camera threads.
 - 0.6 -- Fixed preview rotation. Images were being shown upside down.
 - 0.5 -- Fixed page numbering issues. Added zoom adjustment UI.

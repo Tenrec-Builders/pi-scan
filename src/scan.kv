@@ -2,7 +2,10 @@
 ###################################################################################
 
 <StartScreen>:
+  quitButton: quit_button
+  beginButton: begin_button
   powerOff: power_off
+  cameraOffButton: camera_off_button
   titleLabel: title_label
   name: 'start'
   Label:
@@ -16,9 +19,10 @@
     anchor_x: 'left'
     anchor_y: 'top'
     Button:
+      id: quit_button
       size_hint: (0.2, 0.1)
-      text: 'Quit to Console'
-      on_press: root.quit()
+      text: 'Quit to Console (9)'
+      on_press: root.quitAction()
 
   BoxLayout:
     orientation: 'vertical'
@@ -32,15 +36,20 @@
       text: 'Pi Scan'
 
     Button:
-      text: 'Begin'
-      on_press:
-        root.manager.transition.direction = 'left'
-        root.manager.current = 'configure-disk'
+      id: begin_button
+      text: 'Begin Scanning (1)'
+      on_press: root.beginAction()
+
+    Button:
+      id: camera_off_button
+      text: 'Turn Off Cameras (2)'
+      on_press: root.turnOffCameras()
 
 ###################################################################################
 
 <ConfigureDiskScreen>:
   diskStatus: disk_status
+  backButton: back_button
   diskNext: disk_next
   upgradeButton: upgrade_button
   spinner: spinner
@@ -73,28 +82,24 @@
       Button:
         id: disk_next
         size_hint: (0.2, 0.15)
-        text: 'Next'
-        on_press:
-          root.manager.transition.direction = 'left'
-          root.manager.current = 'configure-camera'
+        text: 'Next (1)'
+        on_press: root.diskNextAction()
     AnchorLayout:
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
+        id: back_button
         size_hint: (0.2, 0.15)
-        text: 'Back'
-        on_press:
-          root.manager.transition.direction = 'right'
-          root.manager.current = 'start'
+        text: 'Back (9)'
+        on_press: root.backAction()
     AnchorLayout:
       anchor_x: 'right'
       anchor_y: 'top'
       Button:
         id: upgrade_button
         size_hint: (0.2, 0.15)
-        text: 'Upgrade'
-        on_press:
-          root.ugrade()
+        text: 'Upgrade (2)'
+        on_press: root.upgradeAction()
 
 ###################################################################################
 
@@ -103,6 +108,7 @@
   cameraNext: camera_next
   searchingLayout: searching_layout
   foundLayout: found_layout
+  backButton: back_button
   name: 'configure-camera'
   RelativeLayout:
     id: searching_layout
@@ -128,9 +134,11 @@
 
   RelativeLayout:
     id: found_layout
+    size_hint: (1.0, 1.0)
     BoxLayout:
       orientation: 'vertical'
-      size_hint: (1.0, 1.0)
+      spacing: 20
+      size_hint: (1.0, 0.9)
       pos_hint: {'center_x': 0.5, 'center_y': 0.5}
       Label:
         text_size: self.size
@@ -142,19 +150,21 @@
       Button:
         size_hint: 0.3, 0.2
         pos_hint: {'center_x': 0.5}
-        text: 'Adjust Camera Zoom'
+        text: 'Adjust Camera Zoom (2)'
         on_press:
-          root.manager.transition.direction = 'left'
-          root.manager.current = 'zoom-camera'
-      AnchorLayout:
-        size_hint: 0.2, 0.15
-        anchor_x: 'right'
-        anchor_y: 'top'
-        Button:
-          text: 'Debug Cameras'
-          on_press:
-            root.manager.transition.direction = 'left'
-            root.manager.current = 'debug'
+          root.zoom()
+      Button:
+        size_hint: 0.3, 0.2
+        pos_hint: {'center_x': 0.5}
+        text: 'Adjust Shutter Speed (3)'
+        on_press:
+          root.shutter()
+      Button:
+        size_hint: 0.3, 0.2
+        pos_hint: {'center_x': 0.5}
+        text: 'Debug Cameras (4)'
+        on_press:
+          root.debug()
 
   RelativeLayout:
     size_hint: (1, 0.15)
@@ -165,24 +175,63 @@
       Button:
         id: camera_next
         size_hint: (0.2, 1)
-        text: 'Next'
+        text: 'Next (1)'
         on_press:
-          root.next()
+          root.nextAction()
     AnchorLayout:
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
+        id: back_button
         size_hint: (0.2, 1)
-        text: 'Back'
-        on_press:
-          root.manager.transition.direction = 'right'
-          root.manager.current = 'configure-disk'
+        text: 'Back (9)'
+        on_press: root.backAction()
 
 ###################################################################################
 
 <ZoomCameraScreen>:
+  select: select
+  name: 'zoom-camera'
+  OptionSelect:
+    id: select
+    title: 'Even <-- Zoom --> Odd'
+    key: 'zoom'
+    choices: ('Min Zoom', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', 'Max Zoom')
+    default: '2.5'
+    help: 'Pick a Zoom Level and tap Test Shot to see what it looks like.'
+
+<ShutterCameraScreen>:
+  select: select
+  name: 'shutter-camera'
+  OptionSelect:
+    id: select
+    title: 'Even <-- Shutter Speed --> Odd'
+    key: 'shutter'
+    choices: ('1/250', '1/125', '1/60', '1/30', '1/25', '1/20', '1/18', '1/16', '1/15', '1/14', '1/12', '1/10', '1/8', '1/6', '1/4', '1/3', '1/2', '1/1')
+    default: '1/15'
+    help: 'Pick a Shutter speed (in seconds) and tap Test Shot to see what it looks like.'
+
+<SettingPicker>:
+  previousButton: previous_button
+  nextButton: next_button
+  displayText: display_text
+  orientation: 'horizontal'
+  Button:
+    text: '<'
+    id: previous_button
+    on_press: root.goPrevious()
+  Label:
+    text: ''
+    id: display_text
+  Button:
+    text: '>'
+    id: next_button
+    on_press: root.goNext()
+
+<OptionSelect>:
   preview: preview
   noPreviewLabel: no_preview_label
+  titleLabel: title_label
   evenControl: even_control
   oddControl: odd_control
   name: 'zoom-camera'
@@ -198,6 +247,7 @@
         anchor_x: 'center'
         anchor_y: 'top'
         Label:
+          id: title_label
           size_hint: (1, 1)
           text_size: self.size
           halign: 'center'
@@ -207,19 +257,21 @@
       AnchorLayout:
         anchor_x: 'left'
         anchor_y: 'top'
-        Spinner:
+        SettingPicker:
           size_hint: (0.3, 1)
           id: even_control
-          text: '5'
-          values: ('Min Zoom', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Max Zoom')  
+          nextKey: 'i'
+          previousKey: 'u'
+            
       AnchorLayout:
         anchor_x: 'right'
         anchor_y: 'top'
-        Spinner:
+        SettingPicker:
           size_hint: (0.3, 1)
-          text: '5'
           id: odd_control
-          values: ('Min Zoom', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Max Zoom')  
+          nextKey: 'p'
+          previousKey: 'o'
+
     PreviewOutside:
       id: preview
       size_hint: (1, 0.95)
@@ -245,7 +297,7 @@
       Button:
         id: camera_next
         size_hint: (0.2, 1)
-        text: 'Done'
+        text: 'Done (1)'
         on_press:
           root.done()
     AnchorLayout:
@@ -253,7 +305,7 @@
       anchor_y: 'bottom'
       Button:
         size_hint: (0.2, 1)
-        text: 'Test Shot'
+        text: 'Test Shot (3)'
         on_press:
           root.test()
 
@@ -266,6 +318,7 @@
   cameraRefocus: camera_refocus
   cameraSwap: camera_swap
   cameraLabel: camera_label
+  backButton: back_button
   name: 'focus-camera'
   BoxLayout:
     orientation: 'vertical'
@@ -312,35 +365,33 @@
           id: camera_refocus
           size_hint: (0.5, 1)
           pos_hint: {'center_x': 0.5}
-          text: 'Refocus'
+          text: 'Refocus (3)'
           on_press:
-            root.refocus()
+            root.cameraRefocusAction()
         Button:
           id: camera_swap
           size_hint: (0.5, 1)
           pos_hint: {'center_x': 0.5}
-          text: 'Swap'
+          text: 'Swap (5)'
           on_press:
-            root.swap()
+            root.cameraSwapAction()
     AnchorLayout:
       anchor_x: 'right'
       anchor_y: 'bottom'
       Button:
         id: camera_next
         size_hint: (0.2, 1)
-        text: 'Next'
+        text: 'Next (1)'
         on_press:
-          root.next()
+          root.cameraNextAction()
     AnchorLayout:
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
+        id: back_button
         size_hint: (0.2, 1)
-        text: 'Back'
-        on_press:
-          root.done()
-          root.manager.transition.direction = 'right'
-          root.manager.current = 'configure-camera'
+        text: 'Back (9)'
+        on_press: root.backAction()
 
 ###################################################################################
 
@@ -425,9 +476,10 @@
 
 <CaptureScreen>:
   preview: preview
-  captureButton: capture
-  rescanButton: rescan
+  captureButton: capture_button
+  rescanButton: rescan_button
   previewButton: preview_button
+  doneButton: done_button
   captureLabel: capture_label
   name: 'capture'
   BoxLayout:
@@ -457,7 +509,7 @@
       Button:
         id: preview_button
         size_hint: (0.3, 0.1)
-        text: 'Show Preview'
+        text: 'Show Preview (1)'
         on_press:
           root.showPreview()
 
@@ -467,32 +519,34 @@
       anchor_x: 'right'
       anchor_y: 'bottom'
       Button:
+        id: done_button
         size_hint: (0.2, 1)
-        text: 'Done'
+        text: 'Done (5)'
         on_press:
           root.done()
     AnchorLayout:
       anchor_x: 'center'
       anchor_y: 'bottom'
       Button:
-        id: capture
+        id: capture_button
         size_hint: (0.4, 1)
-        text: 'Capture'
+        text: 'Capture (space)'
         on_press:
           root.capture()
     AnchorLayout:
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
-        id: rescan
+        id: rescan_button
         size_hint: (0.2, 1)
-        text: 'Rescan'
+        text: 'Rescan (3)'
         on_press:
           root.rescan()
 
 ###################################################################################
 
 <CaptureWaitScreen>:
+  restartButton: restart_button
   name: 'capture-wait'
   BoxLayout:
     orientation: 'vertical'
@@ -516,14 +570,15 @@
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
+        id: restart_button
         size_hint: (0.2, 1)
-        text: 'Restart Pi Scan'
-        on_press:
-          exit()
+        text: 'Restart Pi Scan (0)'
+        on_press: root.restartAction()
 
 ###################################################################################
 
 <PreviewWaitScreen>:
+  restartButton: restart_button
   name: 'preview-wait'
   BoxLayout:
     orientation: 'vertical'
@@ -547,14 +602,15 @@
       anchor_x: 'left'
       anchor_y: 'bottom'
       Button:
+        id: restart_button
         size_hint: (0.2, 1)
-        text: 'Restart Pi Scan'
-        on_press:
-          exit()
+        text: 'Restart Pi Scan (0)'
+        on_press: root.restartAction()
 
 ###################################################################################
 
 <CaptureFailScreen>:
+  okButton: ok_button
   evenLabel: even_label
   oddLabel: odd_label
   name: 'capture-fail'
@@ -584,9 +640,10 @@
       markup: True
       text: 'odd camera: '
     Button:
+      id: ok_button
       size_hint: (0.1, 0.2)
       pos_hint: { 'center_x': 0.5 }
-      text: 'Ok'
+      text: 'Ok (1)'
       on_press:
         root.ok()
   RelativeLayout:
@@ -596,9 +653,8 @@
       anchor_y: 'bottom'
       Button:
         size_hint: (0.2, 1)
-        text: 'Restart Pi Scan'
-        on_press:
-          exit()
+        text: 'Restart Pi Scan (0)'
+        on_press: root.restartAction()
 
 ###################################################################################
 
@@ -630,7 +686,8 @@
   oddStatus: odd_status
   oddLog: odd_log
   oddMessage: odd_message
-  okButton: ok
+  okButton: ok_button
+  restartButton: restart_button
   name: 'debug'
   BoxLayout:
     size_hint: (0.95, 1)
@@ -661,7 +718,7 @@
         text: 'Searching...'
       Button:
         id: even_log
-        text: 'Get Debug Log'
+        text: 'Get Debug Log (2)'
         on_press:
           root.getEvenLog()
     Label:
@@ -698,7 +755,7 @@
         text: 'Searching...'
       Button:
         id: odd_log
-        text: 'Get Debug Log'
+        text: 'Get Debug Log (3)'
         on_press:
           root.getOddLog()
     Label:
@@ -715,19 +772,19 @@
         anchor_x: 'right'
         anchor_y: 'bottom'
         Button:
-          id: ok
+          id: ok_button
           size_hint: (0.2, 1)
-          text: 'Ok'
+          text: 'Ok (1)'
           on_press:
             root.ok()
       AnchorLayout:
+        id: restart_button
         anchor_x: 'left'
         anchor_y: 'bottom'
         Button:
           size_hint: (0.2, 1)
-          text: 'Restart Pi Scan'
-          on_press:
-            exit()
+          text: 'Restart Pi Scan (0)'
+          on_press: root.restartAction()
 
 ###################################################################################
 
@@ -736,6 +793,7 @@
   ConfigureDiskScreen:
   ConfigureCameraScreen:
   ZoomCameraScreen:
+  ShutterCameraScreen:
   FocusCameraScreen:
   CaptureScreen:
   CaptureWaitScreen:

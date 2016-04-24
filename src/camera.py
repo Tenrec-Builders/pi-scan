@@ -3,18 +3,49 @@ import chdkptp
 from lupa import LuaError
 import errorlog
 
-choiceToFactor = {
+zoomToFactor = {
   'Min Zoom': 0.0,
-  '1': 0.1,
-  '2': 0.2,
-  '3': 0.3,
-  '4': 0.4,
-  '5': 0.5,
-  '6': 0.6,
-  '7': 0.7,
-  '8': 0.8,
-  '9': 0.9,
+  '0.5':      0.05,
+  '1':        0.1,
+  '1.5':      0.15,
+  '2':        0.2,
+  '2.5':      0.25,
+  '3':        0.3,
+  '3.5':      0.35,
+  '4':        0.4,
+  '4.5':      0.45,
+  '5':        0.5,
+  '5.5':      0.55,
+  '6':        0.6,
+  '6.5':      0.65,
+  '7':        0.7,
+  '7.5':      0.75,
+  '8':        0.8,
+  '8.5':      0.85,
+  '9':        0.9,
+  '9.5':      0.95,
   'Max Zoom': 1.0
+  }
+
+shutterToFactor = {
+  '1/250': 1/250.0,
+  '1/125': 1/125.0,
+  '1/60':  1/60.0,
+  '1/30':  1/30.0,
+  '1/25':  1/25.0,
+  '1/20':  1/20.0,
+  '1/18':  1/18.0,
+  '1/16':  1/16.0,
+  '1/15':  1/15.0,
+  '1/14':  1/14.0,
+  '1/12':  1/12.0,
+  '1/10':  1/10.0,
+  '1/8':   1/8.0,
+  '1/6':   1/6.0,
+  '1/4':   1/4.0,
+  '1/3':   1/3.0,
+  '1/2':   1/2.0,
+  '1/1':   1/1.0
   }
 
 def search():
@@ -44,6 +75,8 @@ class Camera:
     self.isReady = False
     self.message = ''
     self.position = 'odd'
+    self.debugCount = 3
+    self.debugFail = ''
     
     # TODO Warning about unsupported cameras?
 
@@ -128,7 +161,7 @@ class Camera:
     try:
       if self.is_connected():
         self.message = 'Error during refocus'
-        self.device.lua_execute("set_aflock(1);sleep(50);", do_return=False)
+        self.device.lua_execute("sleep(50);press('shoot_half');sleep(500);release('shoot_half');sleep(50);set_aflock(1);sleep(50);", do_return=False)
         success = True
       else:
         self.message = 'Lost connection before refocus'
@@ -142,7 +175,7 @@ class Camera:
     try:
       if self.is_connected():
         self.message = 'Error during unlock focus'
-        self.device.lua_execute("set_aflock(0);sleep(50);", do_return=False)
+        self.device.lua_execute("sleep(50);set_aflock(0);sleep(50);", do_return=False)
         success = True
       else:
         self.message = 'Lost connection before unlock focus'
@@ -167,19 +200,36 @@ class Camera:
 
   def calculate_zoom(self):
     if self.zoom_steps is None:
-      self.zoom_steps = self.device.lua_execute('return get_zoom_steps()')
+      self.zoom_steps = self.device.lua_execute('sleep(50); return get_zoom_steps()')
     choice = '5'
     if 'zoom' in self.config:
       choice = self.config['zoom']
     factor = 0.5
-    if choice in choiceToFactor:
-      factor = choiceToFactor[choice]
+    if choice in zoomToFactor:
+      factor = zoomToFactor[choice]
     return max(round(self.zoom_steps * factor) - 1, 0)
 
   ###########################################################################
 
+  def calculate_shutter(self):
+    choice = '1/15'
+    if 'shutter' in self.config:
+      choice = self.config['shutter']
+    factor = 1/15.0
+    if choice in shutterToFactor:
+      factor = shutterToFactor[choice]
+    return factor
+  
+  ###########################################################################
+
   def capture(self):
     result = None
+    if self.debugFail == self.position:
+      self.debugCount -= 1
+      if self.debugCount <= 0:
+        self.debugCount = 4
+        self.message = 'Testing failure'
+        return None
     try:
       self.message = 'Failed before shooting'
       if self.isReady and self.is_connected():
@@ -210,7 +260,7 @@ class Camera:
   def makeOptions(self):
     options = {}
     options['svm'] = chdkptp.util.iso_to_sv96(100)
-    options['tv'] = chdkptp.util.shutter_to_tv96(1/10.0)
+    options['tv'] = chdkptp.util.shutter_to_tv96(self.calculate_shutter())
     options['nd'] = 2
     options['fformat'] = 1
     luaOptions = self.device._lua.table(**options)
@@ -220,11 +270,11 @@ class Camera:
   #def _shoot_streaming(self, options, dng=False):
     self.message = 'Remote shoot intialization failed'
     self.device.lua_execute(
-        "return rs_init(%s)" % options, remote_libs=['rs_shoot_init'])
+        "sleep(50); return rs_init(%s)" % options, remote_libs=['rs_shoot_init'], do_return=False)
     # TODO: Check for errors
     self.message = 'Remote shoot failed'
-    self.device.lua_execute("rs_shoot(%s)" % options,
-                     remote_libs=['rs_shoot'], wait=False)
+    self.device.lua_execute("sleep(50); rs_shoot(%s)" % options,
+                     remote_libs=['rs_shoot'], wait=False, do_return=False)
     self.message = 'Populating image data failed'
     rcopts = {}
     img_data = self.device._lua.table()
@@ -238,7 +288,7 @@ class Camera:
     # TODO: Check for error
     # TODO: Check for timeout
     self.message = 'Initializing USB capture failed'
-    self.device.lua_execute('init_usb_capture(0)')
+    self.device.lua_execute('sleep(50); init_usb_capture(0)', do_return=False)
     # NOTE: We can't touch the chunk data from Python or else the
     # Lua runtime segfaults, so we let Lua take care of assembling
     # the output data
@@ -296,6 +346,23 @@ class Camera:
       'end ', do_return=False)
 
   ###########################################################################
+
+  def beepFail(self):
+    try:
+      if self.is_connected():
+        self.device.lua_execute('sleep(50); play_sound(6)', do_return=False)
+    except Exception as e:
+      self.log('Failed to beep: ' + str(e) + ' ' + str(e.args) + '\n' + traceback.format_exc())
+
+  ###########################################################################
+      
+  def turnOff(self):
+    try:
+      if self.is_connected():
+        self.device.lua_execute('sleep(50); post_levent_to_ui("PressPowerButton")',
+                                do_return=False)
+    except Exception as e:
+      self.log('Failed to power off: ' + str(e) + ' ' + str(e.args) + '\n' + traceback.format_exc())
 
   #def getConfig(self):
   #  configText = '{ "zoom": 20, "whitebalance": "Tungsten" }'

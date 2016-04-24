@@ -1,7 +1,8 @@
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.properties import StringProperty, BooleanProperty, NumericProperty
+from kivy.properties import StringProperty, BooleanProperty, NumericProperty, ObjectProperty, ListProperty
 from kivy.vector import Vector
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.screenmanager import Screen, ScreenManager
@@ -10,8 +11,10 @@ from kivy.core.window import Window
 from kivy.graphics.transformation import Matrix
 import camera_thread, stick, camera, preview, errorlog, preview_thread
 import os, json, string, re, traceback, errno
+import wiringpi
 
-version = '0.7'
+version = '1.0'
+debug = False
 
 odd = None
 even = None
@@ -184,10 +187,10 @@ def checkCameras():
     else:
       for item in cameraList:
         if item.serial_num == odd.serial:
-          if not odd.camera.is_connected():
+          if odd.camera is None or not odd.camera.is_connected():
             odd.reset(item)
         elif item.serial_num == even.serial:
-          if not even.camera.is_connected():
+          if even.camera is None or not even.camera.is_connected():
             even.reset(item)
         elif odd.camera is None or not odd.camera.is_connected():
           odd.reset(item)
@@ -218,6 +221,137 @@ def checkForDisconnected(manager):
 
 #########################################################################################
 
+def handleKeyPress(key, options):
+  if key in options:
+    func = options[key]
+    #if not button.disabled:
+    func()
+
+#########################################################################################
+
+class OptionSelect(RelativeLayout):
+  title = StringProperty('Title')
+  key = StringProperty('key')
+  choice = ListProperty([])
+  default = StringProperty('value')
+  help = StringProperty('Help Message')
+  manager = ObjectProperty(None, allownone=True)
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.done,
+                     '3': self.test })
+    self.evenControl.keyPress(key)
+    self.oddControl.keyPress(key)
+    self.preview.keyPress(key)
+
+  def update(self, dt):
+    checkForDisconnected(self.manager)
+
+  def on_pre_enter(self, manager):
+    try:
+      self.manager = manager
+      self.titleLabel.text = self.title
+      self.noPreviewLabel.text = self.help
+      self.updateControl(self.evenControl, even)
+      self.updateControl(self.oddControl, odd)
+
+      if self.manager.newPreview:
+        self.manager.newPreview = False
+        self.noPreviewLabel.opacity = 0.0
+        self.preview.opacity = 1.0
+      else:
+        self.noPreviewLabel.opacity = 1.0
+        self.preview.opacity = 0.0
+    except Exception as e:
+      handleCrash(e)
+
+  def updateControl(self, control, side):
+    text = self.default
+    for value in self.choices:
+      if self.key in side.config and side.config[self.key] == value:
+        text = value
+    control.set(text, self.choices)
+    #control.option_cls.height = 32
+
+  def test(self):
+    try:
+      odd.config[self.key] = self.oddControl.get()
+      odd.camera.isReady = False
+      odd.capture('/debug/preview-odd.jpg', camera_thread.AUTO_FOCUS)
+      even.config[self.key] = self.evenControl.get()
+      even.camera.isReady = False
+      even.capture('/debug/preview-even.jpg', camera_thread.AUTO_FOCUS)
+      self.manager.capturePage = self.manager.current
+      self.manager.mustPreview = True
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'capture-wait'
+    except Exception as e:
+      handleCrash(e)
+
+  def done(self):
+    try:
+      odd.config[self.key] = self.oddControl.get() 
+      even.config[self.key] = self.evenControl.get()
+      odd.saveConfig(config)
+      even.saveConfig(config)
+      saveConfig(self.manager.mountPoint)
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'configure-camera'
+    except Exception as e:
+      handleCrash(e)
+
+#########################################################################################
+
+class SettingPicker(BoxLayout):
+  nextKey = StringProperty('.')
+  previousKey = StringProperty(',')
+
+  def set(self, val, options):
+    self.options = options
+    self.displayText.text = val
+    self.updateButtons()
+    self.previousButton.text = '< (' + self.previousKey + ')'
+    self.nextButton.text = '> (' + self.nextKey + ')'
+
+  def get(self):
+    return self.displayText.text
+
+  def goNext(self):
+    if self.displayText.text in self.options:
+      index = self.options.index(self.displayText.text)
+      if index < len(self.options) - 1:
+        index += 1
+      self.displayText.text = self.options[index]
+    self.updateButtons()
+
+  def goPrevious(self):
+    if self.displayText.text in self.options:
+      index = self.options.index(self.displayText.text)
+      if index > 0:
+        index -= 1
+      self.displayText.text = self.options[index]
+    self.updateButtons()
+
+  def updateButtons(self):
+    previousDisabled = True
+    nextDisabled = True
+    if self.displayText.text in self.options:
+      index = self.options.index(self.displayText.text)
+      if index > 0:
+        previousDisabled = False
+      if index < len(self.options) - 1:
+        nextDisabled = False
+    self.previousButton.disabled = previousDisabled
+    self.nextButton.disabled = nextDisabled
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { self.previousKey: self.goPrevious,
+                     self.nextKey: self.goNext })
+
+#########################################################################################
+
 class ScanRoot(ScreenManager):
   #scanPath = StringProperty('')
   #updateScanChooser = BooleanProperty(False)
@@ -238,7 +372,10 @@ class StartScreen(Screen):
   syncWait = NumericProperty(0.0)
 
   def update(self, dt):
-    self.titleLabel.text = 'Pi Scan ' + version
+    title = 'Pi Scan ' + version
+    if debug:
+      title += ' (debug)'
+    self.titleLabel.text = title
     errorlog.closeLog()
     maxWait = 60
     count = stick.searchAndUnmount(self.syncWait > maxWait)
@@ -253,6 +390,11 @@ class StartScreen(Screen):
       self.syncWait += dt
       self.powerOff.text = waitString + ' [color=ff3333]Do not power off.[/color]'
     self.manager.mountPoint = None
+    if ((odd.camera is not None and odd.camera.is_connected()) or
+        (even.camera is not None and even.camera.is_connected())):
+      self.cameraOffButton.opacity = 1.0
+    else:
+      self.cameraOffButton.opacity = 0.0
 
   def on_pre_leave(self):
     try:
@@ -261,9 +403,27 @@ class StartScreen(Screen):
     except Exception as e:
       handleCrash(e)
 
-  def quit(self):
-    os.system('killall run-pi-scan.sh')
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.beginAction,
+                     '2': self.turnOffCameras,
+                     '9': self.quitAction })
+
+  def beginAction(self):
+    self.manager.transition.direction = 'left'
+    self.manager.current = 'configure-disk'
+
+  def quitAction(self):
+    os.system('killall run-pi-scan.sh python')
     exit()
+
+  def turnOffCameras(self):
+    if odd.camera is not None:
+      odd.camera.turnOff()
+      odd.camera = None
+    if even.camera is not None:
+      even.camera.turnOff()
+      even.camera = None
 
 #########################################################################################
 
@@ -314,6 +474,12 @@ class ConfigureDiskScreen(Screen):
       self.spinner.opacity = 1.0
       self.upgradeButton.opacity = 0.0
       self.upgradeButton.disabled = True
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.diskNextAction,
+                     '9': self.backAction,
+                     '2': self.upgradeAction })
 
   def on_pre_enter(self):
     try:
@@ -369,52 +535,28 @@ class ConfigureDiskScreen(Screen):
                 '.archive')
     return result
 
-  def upgrade(self):
+  def diskNextAction(self):
+    if not self.diskNext.disabled:
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'configure-camera'
+
+  def backAction(self):
+    self.manager.transition.direction = 'right'
+    self.manager.current = 'start'
+
+  def upgradeAction(self):
     try:
       upgradeFile = self.getUpgrade()
       if upgradeFile is not None:
         self.upgradeButton.disabled = True
         os.system('sudo mount -o remount,rw /')
-        os.system('unzip ' + upgradeFile + ' -d /home_org/pi/')
+        os.system('unzip -o ' + upgradeFile + ' -d /home_org/pi/')
         os.system('sudo mount -o remount,ro /')
-        os.system('unzip ' + upgradeFile + ' -d /home/pi/')
-        os.system('sudo reboot')
+        os.system('unzip -o ' + upgradeFile + ' -d /home/pi/')
+        exit(0)
+        #os.system('sudo reboot')
     except Exception as e:
       handleCrash(e)
-
-#########################################################################################
-
-class ConfigureFolderScreen(Screen):
-  def update(self, dt):
-    pass
-
-#########################################################################################
-
-class ChangeFolderScreen(Screen):
-  def update(self, dt):
-    if self.manager.updateScanChooser:
-      self.manager.updateScanChooser = False
-      self.scanChooser.path = ''
-      self.scanChooser.path = self.manager.scanPath
-    #self.manager.current = 'find-storage'
-
-#########################################################################################
-
-class NewFolderScreen(Screen):
-  def update(self, dt):
-    disabledState = False
-    if self.folderName.text == '':
-      disabledState = True
-    if self.okButton.disabled != disabledState:
-      self.okButton.disabled = disabledState
-
-  def clickAddFolder(self, name):
-    try:
-      os.mkdir(self.manager.scanPath + '/' + name)
-    except:
-      # Directory exists
-      pass
-    self.manager.updateScanChooser = True
 
 #########################################################################################
 
@@ -430,7 +572,7 @@ class ConfigureCameraScreen(Screen):
         self.cameraLabel.text = 'Too many cameras found. Disconnect until there are only two.'
         self.cameraNext.disabled = True
         self.searchingLayout.opacity = 1.0
-        self.foundLayout.opaicty = 0.0
+        self.foundLayout.opacity = 0.0
       elif oddFound and evenFound:
         #self.cameraLabel.text = 'Found two cameras. Click next to continue.'
         self.cameraNext.disabled = False
@@ -452,6 +594,14 @@ class ConfigureCameraScreen(Screen):
         self.searchingLayout.opacity = 1.0
         self.foundLayout.opacity = 0.0
 
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.nextAction,
+                     '2': self.zoom,
+                     '3': self.shutter,
+                     '4': self.debug,
+                     '9': self.backAction })
+
   def on_pre_enter(self):
     try:
       errorlog.openLog(self.manager.mountPoint)
@@ -470,12 +620,45 @@ class ConfigureCameraScreen(Screen):
     except Exception as e:
       handleCrash(e)
 
-  def next(self):
+  def zoom(self):
     try:
       loadConfig(self.manager.mountPoint)
       configureSides()
       self.manager.transition.direction = 'left'
-      self.manager.current = 'focus-camera'
+      self.manager.current = 'zoom-camera'
+    except Exception as e:
+      handleCrash(e)
+
+  def shutter(self):
+    try:
+      loadConfig(self.manager.mountPoint)
+      configureSides()
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'shutter-camera'
+    except Exception as e:
+      handleCrash(e)
+
+  def nextAction(self):
+    try:
+      if not self.cameraNext.disabled:
+        loadConfig(self.manager.mountPoint)
+        configureSides()
+        self.manager.transition.direction = 'left'
+        self.manager.current = 'focus-camera'
+    except Exception as e:
+      handleCrash(e)
+
+  def backAction(self):
+    try:
+      self.manager.transition.direction = 'right'
+      self.manager.current = 'configure-disk'
+    except Exception as e:
+      handleCrash(e)
+
+  def debug(self):
+    try:
+      self.manager.transition.direction = 'left'
+      self.manager.current = 'debug'
     except Exception as e:
       handleCrash(e)
 
@@ -502,6 +685,52 @@ class PreviewOutside(RelativeLayout):
       self.scatter.scale = zeroScale
     except Exception as e:
       handleCrash(e)
+
+  def moveUp(self):
+    try:
+      self.scatter.apply_transform(Matrix().translate(x=0,y=-100/self.scatter.scale,z=0))
+    except Exception as e:
+      handleCrash(e)
+
+  def moveDown(self):
+    try:
+      self.scatter.apply_transform(Matrix().translate(x=0,y=100/self.scatter.scale,z=0))
+    except Exception as e:
+      handleCrash(e)
+
+  def moveLeft(self):
+    try:
+      self.scatter.apply_transform(Matrix().translate(x=100/self.scatter.scale,y=0,z=0))
+    except Exception as e:
+      handleCrash(e)
+
+  def moveRight(self):
+    try:
+      self.scatter.apply_transform(Matrix().translate(x=-100/self.scatter.scale,y=0,z=0))
+    except Exception as e:
+      handleCrash(e)
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '+': self.zoomIn,
+                     '=': self.zoomIn,
+                     '-': self.zoomOut,
+                     '_': self.zoomOut,
+                     '0': self.zoomZero,
+                     ')': self.zoomZero,
+                     'w': self.moveUp,
+                     '8': self.moveUp,
+                     'up': self.moveUp,
+                     's': self.moveDown,
+                     '2': self.moveDown,
+                     'down': self.moveDown,
+                     'a': self.moveLeft,
+                     '4': self.moveLeft,
+                     'left': self.moveLeft,
+                     'd': self.moveRight,
+                     '6': self.moveRight,
+                     'right': self.moveRight
+                     })
 
   #def on_touch_down(self, event):
   #  self.tryScroll(event)
@@ -536,6 +765,14 @@ class FocusCameraScreen(Screen):
   
   def update(self, dt):
     checkForDisconnected(self.manager)
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.cameraNextAction,
+                     '3': self.cameraRefocusAction,
+                     '5': self.cameraSwapAction,
+                     '9': self.backAction })
+    self.preview.keyPress(key)
 
   def on_pre_enter(self):
     try:
@@ -574,15 +811,16 @@ class FocusCameraScreen(Screen):
     self.preview.even.clear_widgets()
     self.preview.odd.clear_widgets()
 
-  def next(self):
+  def cameraNextAction(self):
     try:
-      self.done()
-      self.manager.transition.direction = 'left'
-      self.manager.current = 'capture'
+      if not self.cameraNext.disabled:
+        self.done()
+        self.manager.transition.direction = 'left'
+        self.manager.current = 'capture'
     except Exception as e:
       handleCrash(e)
 
-  def refocus(self):
+  def cameraRefocusAction(self):
     try:
       odd.capture('/debug/preview-odd.jpg', camera_thread.LOCK_FOCUS)
       even.capture('/debug/preview-even.jpg', camera_thread.LOCK_FOCUS)
@@ -593,15 +831,21 @@ class FocusCameraScreen(Screen):
     except Exception as e:
       handleCrash(e)
 
-  def swap(self):
+  def cameraSwapAction(self):
     try:
-      swapSides()
-      self.manager.newPreview = True
-      self.manager.capturePage = 'focus-camera'
-      self.manager.transition.direct = 'left'
-      self.manager.current = 'preview-wait'
+      if not self.cameraSwap.disabled:
+        swapSides()
+        self.manager.newPreview = True
+        self.manager.capturePage = 'focus-camera'
+        self.manager.transition.direct = 'left'
+        self.manager.current = 'preview-wait'
     except Exception as e:
       handleCrash(e)
+
+  def backAction(self):
+    self.done()
+    self.manager.transition.direction = 'right'
+    self.manager.current = 'configure-camera'
 
 #########################################################################################
 
@@ -636,6 +880,13 @@ class CaptureWaitScreen(Screen):
         self.manager.transition.direction = 'left'
         self.manager.current = 'capture-fail'
 
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '0': self.restartAction })
+
+  def restartAction(self):
+    os.system('killall python')    
+
 class PreviewWaitScreen(Screen):
 
   def update(self, dt):
@@ -664,62 +915,41 @@ class PreviewWaitScreen(Screen):
     except Exception as e:
       handleCrash(e)
 
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '0': self.restartAction })
+
+  def restartAction(self):
+    os.system('killall python')    
+
 #########################################################################################
 
 class ZoomCameraScreen(Screen):
+  preview = ObjectProperty(None, noneallowed=True)
+  
   def update(self, dt):
-    checkForDisconnected(self.manager)
+    self.select.update(dt)
+
+  def keyPress(self, key):
+    self.select.keyPress(key)
 
   def on_pre_enter(self):
-    try:
-      loadConfig(self.manager.mountPoint)
-      self.updateControl(self.evenControl, even)
-      self.updateControl(self.oddControl, odd)
+    self.preview = self.select.preview
+    self.select.on_pre_enter(self.manager)
 
-      if self.manager.newPreview:
-        self.manager.newPreview = False
-        self.noPreviewLabel.opacity = 0.0
-        self.preview.opacity = 1.0
-      else:
-        self.noPreviewLabel.opacity = 1.0
-        self.preview.opacity = 0.0
-    except Exception as e:
-      handleCrash(e)
+class ShutterCameraScreen(Screen):
+  preview = ObjectProperty(None, noneallowed=True)
 
-  def updateControl(self, control, side):
-    text = '5'
-    for value in control.values:
-      if 'zoom' in side.config and side.config['zoom'] == value:
-        text = value
-    control.text = text
-    #control.option_cls.height = 32
+  def update(self, dt):
+    self.select.update(dt)
 
-  def test(self):
-    try:
-      odd.config['zoom'] = self.oddControl.text
-      odd.camera.isReady = False
-      odd.capture('/debug/preview-odd.jpg', camera_thread.AUTO_FOCUS)
-      even.config['zoom'] = self.evenControl.text
-      even.camera.isReady = False
-      even.capture('/debug/preview-even.jpg', camera_thread.AUTO_FOCUS)
-      self.manager.capturePage = 'zoom-camera'
-      self.manager.mustPreview = True
-      self.manager.transition.direction = 'left'
-      self.manager.current = 'capture-wait'
-    except Exception as e:
-      handleCrash(e)
+  def keyPress(self, key):
+    self.select.keyPress(key)
 
-  def done(self):
-    try:
-      odd.config['zoom'] = self.oddControl.text
-      even.config['zoom'] = self.evenControl.text
-      odd.saveConfig(config)
-      even.saveConfig(config)
-      saveConfig(self.manager.mountPoint)
-      self.manager.transition.direction = 'left'
-      self.manager.current = 'configure-camera'
-    except Exception as e:
-      handleCrash(e)
+  def on_pre_enter(self):
+    self.preview = self.select.preview
+    self.select.on_pre_enter(self.manager)
+
 
 #########################################################################################
 
@@ -730,51 +960,53 @@ class CaptureScreen(Screen):
     super(CaptureScreen, self).__init__(**kwargs)
     self.lastEvenPage = None
     self.nextEvenPage = None
-    Window.bind(on_key_down=self.on_key_down)
-    
-  def on_key_down(self, window, scancode, codepoint, key, other):
-    try:
-      #if key == '=':
-      #  global screenshotCount
-      #  filename = 'screenshot%d.png' % screenshotCount
-      #  Window.screenshot(name=filename)
-      #  print filename
-      #  screenshotCount += 1
-      if self.manager.current == 'capture':
-        if (key == 's' or
-            key == 'c' or
-            key == 'b' or
-            key == ' '):
-          self.capture()
-        elif key == 'r' and self.lastEvenPage is not None:
-          self.rescan()
-    except Exception as e:
-      handleCrash(e)
-    return True
+    self.isCapturing = True
+
+  def beginCapture(self):
+    self.capture()
 
   def update(self, dt):
     checkForDisconnected(self.manager)
 
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.showPreview,
+                     '3': self.rescan,
+                     '5': self.done, })
+    self.preview.keyPress(key)
+
+  def on_pre_leave(self):
+    self.isCapturing = True
+
   def on_pre_enter(self):
     try:
+      errorlog.write('CAPTURE: on_pre_enter')
+      self.isCapturing = False
       if self.manager.newCapture:
+        errorlog.write('CAPTURE: newCapture is true')
         self.manager.newCapture = False
         if (odd.code == camera_thread.COMPLETE and
             even.code == camera_thread.COMPLETE):
+          errorlog.write('CAPTURE: both are COMPLETE')
           self.lastEvenPage = self.nextEvenPage
           self.nextEvenPage += 2
           self.captureLabel.text = 'Captured Pages ' + str(self.lastEvenPage) + ', ' + str(self.lastEvenPage + 1)
+          self.rescanButton.disabled = False
         else:
+          errorlog.write('CAPTURE: one or both are failure')
           self.captureLabel.text = 'Ready For Capture'
+          self.rescanButton.disabled = True
         odd.code = camera_thread.COMPLETE
         even.code = camera_thread.COMPLETE
 
       if self.manager.newPreview:
+        errorlog.write('CAPTURE: newPreview is true')
         self.manager.newPreview = False
         self.preview.opacity = 1.0
         self.previewButton.opacity = 0.0
         self.previewButton.disabled = True
       else:
+        errorlog.write('CAPTURE: newPreview is false')
         self.preview.opacity = 0.0
         if self.lastEvenPage is not None:
           self.previewButton.opacity = 1.0
@@ -783,13 +1015,11 @@ class CaptureScreen(Screen):
           self.previewButton.opacity = 0.0
           self.previewButton.disabled = True
 
+      errorlog.write('CAPTURE: before resetPages()')
       if self.nextEvenPage is None:
         self.resetPages()
+      errorlog.write('CAPTURE: on_pre_enter complete')
 
-      if self.lastEvenPage is None:
-        self.rescanButton.disabled = True
-      else:
-        self.rescanButton.disabled = False
     except Exception as e:
       handleCrash(e)
 
@@ -814,14 +1044,16 @@ class CaptureScreen(Screen):
 
   def capture(self):
     try:
-      self.scanAt(self.nextEvenPage)
+      if not self.isCapturing:
+        self.scanAt(self.nextEvenPage)
     except Exception as e:
       handleCrash(e)
 
   def rescan(self):
     try:
-      self.nextEvenPage = self.lastEvenPage
-      self.scanAt(self.nextEvenPage)
+      if not self.isCapturing:
+        self.nextEvenPage = self.lastEvenPage
+        self.scanAt(self.nextEvenPage)
     except Exception as e:
       handleCrash(e)
 
@@ -860,8 +1092,8 @@ class CaptureScreen(Screen):
 
 class CaptureFailScreen(Screen):
   def update(self, dt):
-    self.updateLabel(self.evenLabel, even)
-    self.updateLabel(self.oddLabel, odd)
+    if debug:
+      errorlog.write('FAIL: Update')
 
   def updateLabel(self, label, side):
     if side.code == camera_thread.COMPLETE:
@@ -871,19 +1103,39 @@ class CaptureFailScreen(Screen):
 
   def on_pre_enter(self):
     try:
+      if debug:
+        errorlog.write('FAIL: Before labels')
       self.evenLabel.text = 'Even Camera: '
       self.oddLabel.text = 'Odd Camera: '
+      self.updateLabel(self.evenLabel, even)
+      self.updateLabel(self.oddLabel, odd)
+      if debug:
+        errorlog.write('FAIL: Before beeps')
+      even.camera.beepFail()
+      odd.camera.beepFail()
+      errorlog.write('FAIL: After pre_enter')
     except Exception as e:
       handleCrash(e)
 
   def ok(self):
     try:
-      odd.code = camera_thread.COMPLETE
-      even.code = camera_thread.COMPLETE
+      #odd.code = camera_thread.COMPLETE
+      #even.code = camera_thread.COMPLETE
+      errorlog.write('FAIL: before ok')
+      errorlog.write('FAIL: capturePage: ' + self.manager.capturePage)
       self.manager.transition.direction = 'left'
       self.manager.current = self.manager.capturePage
+      errorlog.write('FAIL: after ok')
     except Exception as e:
       handleCrash(e)
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.ok,
+                     '0': self.restartAction })
+
+  def restartAction(self):
+    os.system('killall python')    
 
 #########################################################################################
 
@@ -900,6 +1152,16 @@ class DebugScreen(Screen):
       self.okButton.disabled = False;
     else:
       self.okButton.disabled = True;
+
+  def keyPress(self, key):
+    handleKeyPress(key,
+                   { '1': self.ok,
+                     '2': self.getEvenLog,
+                     '3': self.getOddLog,
+                     '0': self.restartAction })
+
+  def restartAction(self):
+    os.system('killall python')    
 
   def updateSide(self, found, side, status, log, message):
     if found:
@@ -923,6 +1185,8 @@ class DebugScreen(Screen):
       self.evenMessage.text = ''
       self.oddStatus.text = 'Searching...'
       self.evenStatus.text = 'Searching...'
+      even.camera.beepFail()
+      odd.camera.beepFail()
     except Exception as e:
       handleCrash(e)
 
@@ -934,19 +1198,25 @@ class DebugScreen(Screen):
       even.camera.isReady = False
       self.manager.hasFocus = False
       self.manager.transition.direction = 'left'
-      self.manager.current = 'focus-camera'
+      self.manager.current = 'configure-camera'
     except Exception as e:
       handleCrash(e)
 
   def getOddLog(self):
     try:
-      self.getLog(odd)
+      if not self.oddLog.disabled:
+        self.oddLog.disabled = True
+        self.getLog(odd)
+        self.oddLog.disabled = False
     except Exception as e:
       handleCrash(e)
 
   def getEvenLog(self):
     try:
-      self.getLog(even)
+      if not self.evenLog.disabled:
+        self.evenLog.disabled = True
+        self.getLog(even)
+        self.evenLog.disabled = False
     except Exception as e:
       handleCrash(e)
 
@@ -991,8 +1261,21 @@ class CrashScreen(Screen):
 
 class ScanApp(App):
   def build(self):
+    self.handlingKey = False
     self.manager = ScanRoot()
+
+    # Set up GPIO pin for foot pedal
+    os.system("gpio export 21 up")
+    wiringpi.wiringPiSetupSys()
+    #wiringpi.pinMode(21, 0)
+    #wiringpi.pullUpDnControl(21, 2)
+    self.lastPedal = 0
+
     Clock.schedule_interval(self.update, 0.5)
+    Clock.schedule_interval(self.checkPedal, 0.05)
+
+    Window.bind(on_key_down=self.on_key_down)
+    Window.bind(on_key_up=self.on_key_up)
     return self.manager
 
   def update(self, dt):
@@ -1005,6 +1288,45 @@ class ScanApp(App):
     except Exception as e:
       handleCrash(e)
     return True
+
+  def checkPedal(self, dt):
+    try:
+      # Only trigger a capture when the circuit goes from open to closed
+      nextPedal = wiringpi.digitalRead(21)
+      #print('checkPedal', nextPedal)
+      if self.lastPedal == 1 and nextPedal == 0 and 'beginCapture' in dir(self.manager.current_screen):
+        self.manager.current_screen.beginCapture()
+      self.lastPedal = nextPedal
+    except Exception as e:
+      handleCrash(e)
+    return True
+    
+  def on_key_down(self, window, scancode, codepoint, key, other):
+    if not self.handlingKey:
+      self.handlingKey = True
+      try:
+        #print 'KEY: ', scancode, codepoint, key, other
+        #if key == '=':
+        #  global screenshotCount
+        #  filename = 'screenshot%d.png' % screenshotCount
+        #  Window.screenshot(name=filename)
+        #  print filename
+        #  screenshotCount += 1
+        if (key == 'c' or
+            key == 'b' or
+            key == ' '):
+          if 'beginCapture' in dir(self.manager.current_screen):
+            self.manager.current_screen.beginCapture()
+        else:
+          # (key == '0' or key == '1' or key == '2' or key == '3' or key == '4' or
+          #key == '5' or key == '6' or key == '7' or key == '8' or key == '9'):
+          self.manager.current_screen.keyPress(key)
+      except Exception as e:
+        handleCrash(e)
+    return True
+
+  def on_key_up(self, window, scancode, codepoint, key, other):
+    self.handlingKey = False
 
 if __name__ == '__main__':
   odd = CameraSide(camera_thread.CameraThread(), 'odd')
