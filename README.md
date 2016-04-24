@@ -40,12 +40,20 @@ Industrial foot pedals are more robust than equivalently priced USB foot pedals.
 
 Any electrical connection between the GPIO21 and GND pins on the Raspberry Pi will cause a capture when scanning. So any button or microswitch can work as a scanning trigger if it is wired up properly.
 
+# Updating
+
+If you are using version Pi Scan 0.8 or later, you may be able to update your installation without downloading the whole image and re-imaging your SD card. Download an update file linked below, copy it to your external storage (in the root folder, not in the 'images' or 'debug' folders), and boot up Pi Scan. Tap 'Begin Scan'. Then when the external storage is loaded, you should see an 'Upgrade' button on the top right. Tap that and updating should take just a few seconds.
+
+If the above process does not work, then download a full image below and install it instead.
+
+* [Update to Pi Scan 1.0](http://tenrec.builders/pi-scan/1.0/pi-scan-update-1.0.archive)
+
 # Download
 
-Raspberry Pi 2 (for use with mouse):
+Both Raspberry Pi 2 and Raspberry Pi 3 are supported. There are two variants. One version supports mouse input and any HDMI screen. The other version supports the official Raspberry Pi touch screen:
 
-* [Raspberry Pi 2 Image (for mouse)](http://tenrec.builders/pi-scan/latest/pi-scan-latest-mouse.zip)
-* [Raspberry Pi 2 Image (for touchscreen)](http://tenrec.builders/pi-scan/latest/pi-scan-latest-touch.zip)
+* [Raspberry Pi Image (for mouse)](http://tenrec.builders/pi-scan/latest/pi-scan-latest-mouse.zip)
+* [Raspberry Pi Image (for touchscreen)](http://tenrec.builders/pi-scan/latest/pi-scan-latest-touch.zip)
 
 Two models of cameras are supported. Download the appropriate image for your camera:
 
@@ -53,6 +61,8 @@ Two models of cameras are supported. Download the appropriate image for your cam
 * [Canon PowerShot ELPH/IXUS 160 image](http://tenrec.builders/pi-scan/latest/pi-scan-camera-elph160-latest.zip)
 
 Use these images at your own risk. These images may damage your camera. During early testing of the ELPH 160 image, one camera was bricked and the root cause of this problem was never definitively found. See [this link](http://chdk.setepontos.com/index.php?topic=12321.140).
+
+Other CHDK-compatible cameras may or may not work. If you want to try it out, just install the full CHDK package for the appropriate camera and firmware you use. If it works then great. If not, then you might have to dig into the debug log, code, and CHDK forums to see why not. While I don't support other camera models myself, I am willing to accept pull requests with patches to make Pi Scan compatible with other cameras.
 
 # Installation
 
@@ -114,6 +124,7 @@ There are many camera settings which are not yet user-configurable. These settin
 1. On the disk configuration page, Pi Scan searches for and mounts your external storage. The external storage is used for configuration, debugging logs, and it is where the scanned images are saved. Plug in your USB drive or SD Card Reader and SD Card. After a few seconds, your drive will be detected and you will be able to tap next. If your drive is not detected, try unplugging and replugging in the device.
 1. On the camera configuration page, Pi Scan searches for two cameras attached via USB to the Pi. Once it finds them, you will be able to optionally set the zoom level or move on to the next step.
 1. (Optional) Zoom settings can be set for each camera individually. Tap test shot to capture a photo from each camera and then adjust the zoom settings in the upper left and upper right corners. Don't worry if the pages are on the wrong side for now. When you've set the zoom level you like, tap done. The zoom setting is saved to the external storage, so as long as you keep using the same card, you won't have to re-adjust the zoom settings.
+1. (Optional) Shutter speed can be set for each camera. If your photos are consistently too underexposed or overexposed, tweak the shutter speed.
 1. In order to keep consistent focus, Pi Scan will auto-focus once in each session and then lock that focus for the remainder of the shots. In order to get the best focus shot, you will want to press two pages against the platen of your scanner just as if you were scanning them and then tap the 'Refocus'. Verify on the preview that the focus is good. You will also want to verify that the 'odd' page is pointing to an odd numbered page in your book and that the 'even' page is pointing to an even numbered page. If they are not, you can tap swap to swap the two pages. This will ensure that the pages are interleaved properly when scanning.
 1. During scanning, press pages agains the platen and tap the 'Capture' button. After hearing the shutters on the camera, you can flip to the next page while Pi Scan is processing the photos. On your first scan, you will want to verify that everything looks good. And you will want to do the same periodically as you scan. If you notice a problem during the scan, you can recapture the last two pages with the 'Rescan' button.
 1. Once scanning is complete, tap 'Done' which will take you back to the start screen. Then you can remove your external storage and move the files from it to your computer. If you are scanning the same book in multiple sessions, Pi Scan will continue numbering images where you left off. If you move all of the images from the external storage, it will start saving at '0000.jpg' again.
