@@ -1,0 +1,10 @@
+#!/bin/sh
+DIR=$1
+ROOT_MOUNT=$(awk '$2=="/" {print substr($4,1,2)}' < /etc/fstab)
+if [ $ROOT_MOUNT = "rw" ]
+then
+  /bin/mount --bind ${DIR}_org ${DIR}
+else
+  /bin/mount -t tmpfs ramdisk ${DIR}_rw
+  /usr/bin/unionfs-fuse -o cow,allow_other,suid,dev,nonempty ${DIR}_rw=RW:${DIR}_org=RO ${DIR}
+fi

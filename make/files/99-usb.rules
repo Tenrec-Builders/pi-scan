@@ -1,0 +1,1 @@
+ACTION=="add", SUBSYSTEM=="usb", MODE:="666"

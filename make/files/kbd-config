@@ -1,0 +1,70 @@
+#
+# This files tells the 'kbd' package:
+#
+# - whether to load a specific font and boot (and maybe a screen-font map,
+#   but you should avoid that if possible).
+# - whether to setup an Application-Charset Map other than the default CP437.
+# - whether to do screen saver/DPMS settings
+# - whether to change the keyboard rate/delay or the state of the
+#   keyboard indicators 
+# - whether to show a clock
+#
+# You can also specify per-VC settings by suffixing variable names as in
+# the examples below. This only works on framebuffer devices.
+#
+# For consistency with the configuration file of console-tools the
+# following variables and their _vcN versions are also supported:
+# SCREEN_FONT, SCREEN_FONT_MAP and APP_CHARSET_MAP.
+#
+#
+# Example:
+#
+#CONSOLE_FONT=iso01.f16
+#CONSOLE_FONT_vc2=LatArCyrHeb-16
+#
+#CONSOLE_MAP=iso05
+#CONSOLE_MAP_vc2=user
+#
+# Set the following - more euro-friendly default than kernel font.
+#CONSOLE_FONT=latarcyrheb-sun16.psf
+
+# Forget this one unless you _know_ it is necessary for your font:
+#FONT_MAP=iso01
+
+#  **** screen saver/DPMS settings: all VCs ****
+# These settings are commented by default to avoid the chance of damage to
+# very old monitors that don't support DPMS signalling.
+
+# screen blanking timeout.  monitor remains on, but the screen is cleared to
+# range: 0-60 min (0==never)  kernels I've looked at default to 10 minutes.
+# (see linux/drivers/char/console.c)
+BLANK_TIME=0
+
+# blanking method (VESA DPMS mode to use after BLANK_TIME, before powerdown):
+# on: the default, no DPMS signalling. near instant powerup, no power saving
+# vsync: DPMS Standby mode. nearly instant recovery, uses 110/120W (17" screen)
+# hsync: DPMS Suspend mode. typically 3s recovery, uses 15/120W (17" screen)
+# powerdown,off: DPMS Off mode, typ. 10s recovery, uses  5/120W (17" screen)
+
+# Those values are for my 17" Mag, but some monitors do suspend the same as
+# standby.  xset dpms force {off|standby|suspend|on} is useful for this, if X
+# supports DPMS on your video card.  Set X's DPMS screensaver with xset dpms
+# or use option power_saver in XF86Config
+#
+# DPMS set by default to on, because hsync can cause problems on certain
+# hardware, such as Armada E500 laptops
+BLANK_DPMS=off
+
+# Powerdown time.  The console will go to DPMS Off mode POWERDOWN_TIME
+# minutes _after_ blanking.  (POWERDOWN_TIME + BLANK_TIME after the last input)
+POWERDOWN_TIME=0
+
+# rate and delay can get only specific values, consult kbdrate(1) for help
+#KEYBOARD_RATE="30"
+#KEYBOARD_DELAY="250"
+
+# Turn on numlock by default
+#LEDS=+num
+
+# Display a clock in the right upper corner of the console by running vcstime
+#DO_VCSTIME=yes

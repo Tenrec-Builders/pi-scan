@@ -1,0 +1,6 @@
+[Storage Permissions]
+Identity=unix-group:plugdev
+Action=org.freedesktop.udisks2.filesystem-mount;org.freedesktop.udisks2.filesystem-mount-system;org.freedesktop.udisks2.filesystem-mount-other-seat;org.freedesktop.udisks2.filesystem-mount-fstab
+ResultAny=yes
+ResultActive=yes
+ResultInactive=yes
