@@ -120,44 +120,44 @@ There are many camera settings which are not yet user-configurable. These settin
 
 ## Scanning Steps
 
-1. Boot up the Raspberry Pi and after it starts, you will see the starting screen. When on this screen, Pi Scan will eject your external disk so you can remove it. You can also quit to console and log in using the username 'pi' and password 'raspberry'. For most users, this won't be necessary.
-1. On the disk configuration page, Pi Scan searches for and mounts your external storage. The external storage is used for configuration, debugging logs, and it is where the scanned images are saved. Plug in your USB drive or SD Card Reader and SD Card. After a few seconds, your drive will be detected and you will be able to tap next. If your drive is not detected, try unplugging and replugging in the device.
-1. On the camera configuration page, Pi Scan searches for two cameras attached via USB to the Pi. Once it finds them, you will be able to optionally set the zoom level or move on to the next step.
-1. (Optional) Zoom settings can be set for each camera individually. Tap test shot to capture a photo from each camera and then adjust the zoom settings in the upper left and upper right corners. Don't worry if the pages are on the wrong side for now. When you've set the zoom level you like, tap done. The zoom setting is saved to the external storage, so as long as you keep using the same card, you won't have to re-adjust the zoom settings.
+1. Boot up the Raspberry Pi. Once the Pi itself has booted you will see the Pi Scan starting screen. When on this screen, Pi Scan will eject your external disk so you can remove it. If you need to, you can also quit to console and log in using the username 'pi' and password 'raspberry' but for most users this won't be necessary.
+1. On the disk configuration page Pi Scan searches for and mounts your external storage. The external storage is used for configuration, debugging logs, and it is where the scanned images are saved. Plug in your USB drive or SD Card Reader and SD Card. After a few seconds, your drive will be detected and you will be able to tap next. If your drive is not detected, try unplugging and replugging the device.
+1. On the camera configuration page Pi Scan searches for two cameras attached via USB to the Pi. Once it finds them, you will be able to move on to the next step or, optionally, to set a zoom level for each camera.
+1. (Optional) Zoom settings can be set for each camera individually. Tap "test shot" to capture a photo from each camera and then adjust the zoom settings in the upper left and upper right corners. Don't worry if the pages are on the wrong side for now. When you've set the zoom level you like, tap done. The zoom setting is saved to the external storage, so as long as you keep using the same card, you won't have to re-adjust these settings.
 1. (Optional) Shutter speed can be set for each camera. If your photos are consistently too underexposed or overexposed, tweak the shutter speed.
-1. In order to keep consistent focus, Pi Scan will auto-focus once in each session and then lock that focus for the remainder of the shots. In order to get the best focus shot, you will want to press two pages against the platen of your scanner just as if you were scanning them and then tap the 'Refocus'. Verify on the preview that the focus is good. You will also want to verify that the 'odd' page is pointing to an odd numbered page in your book and that the 'even' page is pointing to an even numbered page. If they are not, you can tap swap to swap the two pages. This will ensure that the pages are interleaved properly when scanning.
-1. During scanning, press pages agains the platen and tap the 'Capture' button. After hearing the shutters on the camera, you can flip to the next page while Pi Scan is processing the photos. On your first scan, you will want to verify that everything looks good. And you will want to do the same periodically as you scan. If you notice a problem during the scan, you can recapture the last two pages with the 'Rescan' button.
-1. Once scanning is complete, tap 'Done' which will take you back to the start screen. Then you can remove your external storage and move the files from it to your computer. If you are scanning the same book in multiple sessions, Pi Scan will continue numbering images where you left off. If you move all of the images from the external storage, it will start saving at '0000.jpg' again.
+1. In order to keep camera focus consistent, Pi Scan will auto-focus once in each session and then lock that focus for the remainder of the shots. In order to get the best focus shot, you will want to press two pages against the platen of your scanner just as if you were scanning them and then tap 'Refocus'. Make sure that these pages have lots of text since the cameras have trouble focusing on just white space. Verify on the preview that the focus is good. You will also want to verify that the 'odd' page is pointing to an odd numbered page in your book and that the 'even' page is pointing to an even numbered page. If they are not, you can tap "swap" to swap the two pages. This will ensure that the pages are interleaved properly when scanning.
+1. During scanning, press pages against the platen and tap the 'Capture' button. After hearing the shutters on the camera, you can flip to the next page while Pi Scan is processing the photos. On your first scan, you will want to verify that everything looks good. You should also check periodically as you scan, epsecially for your first few books using Pi Scan. If you notice a problem during the scan, you can recapture the last two pages with the 'Rescan' button.
+1. Once scanning is complete, tap 'Done' to return to the start screen. Here you can remove your external storage and move the files from it to your computer. If you are scanning the same book in multiple sessions, Pi Scan will continue numbering images where you left off. If you move all of the images from the external storage, it will start saving at '0000.jpg' again.
 
-## Handling Failures
+## After Capture
 
-In an ideal world, we wouldn't have to deal with this. There are a few ways in which things can go wrong. Pi Scan was designed to be robust in the presence of problems. Each time you see an error, you should be able to get back to scanning with a minimal of fuss. And the error logs and messages it shows should help diagnose any problems you do encounter.
+Pi Scan does just one part of the overall scanning workflow: managing capture. After using Pi Scan, you will have an SD card full of consecutively named JPEG files. Turning those files into an e-book is a process called Post Processing. There are many different kinds of software that can help you do this task. A good open source option is called ScanTailor.
+
+## Troubleshooting
+
+In an ideal world, we wouldn't have to deal with this. In case you run into less than ideal circumstances, Pi Scan will produce error logs and messages to help you diagnose any problems you encounter. Pi Scan was designed to be robust in the presence of problems so if you do run into errors you should be able to get back to scanning with a minimum of fuss. 
 
 ### Capture Failure
 
-Sometimes a camera might return an empty photograph or otherwise not capture successfully. When this happens, Pi Scan will notify you and neither camera image will be saved to disk. Tap 'Ok' on the notification and then tap 'Capture' to try again. If you notice this happening more frequently, note down the error that you see and notify help at tenrec dot builders about the issue. Occasionally, a camera might get into a bad state where every attempted capture fails. If a few captures in a row fail, try turning off and on the camera by hand.
+Sometimes a camera might return an empty photograph or otherwise not capture successfully. When this happens, Pi Scan will notify you and neither camera image will be saved to disk. Tap 'Ok' on the notification and then tap 'Capture' to try again. If you notice this happening more frequently, note down the error that you see and notify help at tenrec dot builders about the issue. Occasionally, a camera might get into a bad state where every attempted capture fails. If a few captures in a row fail, try turning the camera off and on by hand.
 
 ### Camera Crash
 
-Occasionally, a camera will crash or get disconnected. Pi Scan cannot tell the difference between these two events so it always assume that getting disconnected is a crash. When Pi Scan thinks there has been a crash, it pops up a camera debug screen. It will tell you which camera is disconnected, and the last thing it was trying to do when it happened. Reconnect or power cycle the camera and it will detect that the camera is back online. When the camera is back, you can tap 'Get Debug Log' and it will save the debug log for the most recent crash to your external storage in the debug directory. You can send this debug log and the error message you saw on the debug screen to help at tenrec dot builders.
+Occasionally, a camera will crash or get disconnected. Pi Scan cannot tell the difference between these two events so it always assume that getting disconnected is a crash. When Pi Scan thinks there has been a crash, it pops up a camera debug screen. It will tell you which camera is disconnected, and the last thing it was trying to do when it happened. Reconnect or power cycle the camera and it should detect that the camera is back online. When the camera is back, you can tap 'Get Debug Log' and it will save the debug log for the most recent crash to your external storage in the debug directory. You can send this debug log and the error message you saw on the debug screen to help at tenrec dot builders.
 
 Once all cameras are connected again, you can tap 'Ok' to get back to scanning. You will need to go through the 'refocus' screen again first to make sure that the focus is set properly.
 
 ### Pi Scan Crash
 
-Hopefully you will never see a situation where Pi Scan itself crashes, but if you do there is a special crash debug page which shows what happened. Send a photograph of this page to help at tenrec dot builders so it can get fixed.
+Hopefully you will never see Pi Scan itself crashe, but if you do there is a special crash debug page which shows what happened. Send a photograph of this page to help at tenrec dot builders so it can get fixed.
 
 ### Error Log
 
-An error log is saved to the removable storage of every camera failure and crash. This means that even if you tap Ok quickly and miss the message, you can still go back and get it. If you are getting persistent failures or problems, it is worth sending this error log to help at tenrec dot builders.
+An error log of every camera failure and crash is saved to your removable storage. This means that even if you tap Ok quickly and miss the message, you can still go back and see the details later. If you are getting persistent failures or problems, it is worth sending this error log to help at tenrec dot builders.
 
 ### Rebooting
 
-Always rememeber that you cannot corrupt Pi Scan by rebooting. So if there is ever any problem or the system stops responding, you can always just unplug and replug the Raspberry Pi and then get back to scanning. If you do this, you will want to double check to make sure the scans you have saved on external storage are good because it will not have been unmounted cleanly.
-
-# After Capture
-
-Pi Scan does just one part of the overall scanning workflow: managing capture. After using Pi Scan, you will have an SD card full of consecutively named JPEG files. Turning those files into an e-book is a process called Post Processing. There are many different kinds of software that can help you do this task. A good open source option is called ScanTailor.
+Always rememeber that you cannot corrupt Pi Scan by rebooting so if there are ever any problems you cannot resolve or the system stops responding completely, you can always just unplug and replug the Raspberry Pi to get back to scanning. The only danger is that your external storage will not have been unmounted cleanly so if you do have to pull the power and reboot be sure to check the scans you have already made to make sure they are all there and that you can open them normally. 
 
 # Version Notes
 
