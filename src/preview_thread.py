@@ -81,9 +81,12 @@ class PreviewThread:
     try:
       # Load full image from raw binary representation
       result.message = 'Failed to load image'
-      stream = StringIO.StringIO(raw)
-      full = PillowImage.open(stream)
-      #full = JPEGImage(blob=raw)
+      if isinstance(raw, basestring):
+        full = PillowImage.open(raw + '.jpg')
+      else:
+        stream = StringIO.StringIO(raw.decode('utf8'))
+        full = PillowImage.open(stream)
+        #full = JPEGImage(blob=raw)
 
       # Rotate the full image for preview
       if self.position == 'odd':

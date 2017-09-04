@@ -54,7 +54,8 @@ def search():
     devices = chdkptp.list_devices()
     if devices is not None:
       for info in chdkptp.list_devices():
-        result.append(info)
+        if info.chdk_api[0] != -1 or info.chdk_api[1] != -1:
+          result.append(info)
   except LuaError as e:
     errorlog.write('Failed to search: LuaError: ' + str(e.args) + '\nTraceback: ' + traceback.format_exc())
   except Exception as e:
@@ -222,7 +223,7 @@ class Camera:
   
   ###########################################################################
 
-  def capture(self):
+  def capture(self, filename):
     result = None
     if self.debugFail == self.position:
       self.debugCount -= 1
@@ -241,7 +242,11 @@ class Camera:
         self.message = 'Failed while shooting'
         data = self.shoot(self.makeOptions())
         if data:
-          result = data
+          self.message = 'Failed while saving'
+          fp = open(filename + '.jpg', 'w')
+          fp.write(data)
+          fp.close()
+          result = filename
           self.message = 'Failed while re-entering alt mode'
           self.device.lua_execute('sleep(50); enter_alt(); sleep(50);', do_return=False)
         else:

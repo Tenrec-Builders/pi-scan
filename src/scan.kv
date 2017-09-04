@@ -109,6 +109,10 @@
   searchingLayout: searching_layout
   foundLayout: found_layout
   backButton: back_button
+  foundLabel: found_label
+  zoomButton: zoom_button
+  shutterButton: shutter_button
+  debugButton: debug_button
   name: 'configure-camera'
   RelativeLayout:
     id: searching_layout
@@ -141,6 +145,7 @@
       size_hint: (1.0, 0.9)
       pos_hint: {'center_x': 0.5, 'center_y': 0.5}
       Label:
+        id: found_label
         text_size: self.size
         halign: 'center'
         valign: 'middle'
@@ -148,18 +153,21 @@
         markup: True
         text: 'Found two cameras. Click next to continue.'
       Button:
+        id: zoom_button
         size_hint: 0.3, 0.2
         pos_hint: {'center_x': 0.5}
         text: 'Adjust Camera Zoom (2)'
         on_press:
           root.zoom()
       Button:
+        id: shutter_button
         size_hint: 0.3, 0.2
         pos_hint: {'center_x': 0.5}
         text: 'Adjust Shutter Speed (3)'
         on_press:
           root.shutter()
       Button:
+        id: debug_button
         size_hint: 0.3, 0.2
         pos_hint: {'center_x': 0.5}
         text: 'Debug Cameras (4)'

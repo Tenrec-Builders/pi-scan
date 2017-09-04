@@ -54,7 +54,7 @@ class CameraThread:
             if not self.camera.is_connected():
               result.code = DISCONNECTED
           else:
-            scan = self.camera.capture()
+            scan = self.camera.capture(self.filename)
             if scan is None:
               result.scan = None
               result.message = 'Failed to capture: ' + self.camera.message
@@ -79,9 +79,10 @@ class CameraThread:
       self.setResult(result)
 
   # Interface for outside to trigger capture and get the result
-  def beginCapture(self, camera, shouldRefocus):
+  def beginCapture(self, camera, shouldRefocus, filename):
     self.camera = camera
     self.shouldRefocus = shouldRefocus
+    self.filename = filename
     self.captureEvent.set()
 
   def checkResult(self):

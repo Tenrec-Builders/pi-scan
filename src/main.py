@@ -9,16 +9,17 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics.transformation import Matrix
-import camera_thread, stick, camera, preview, errorlog, preview_thread
+import camera_thread, stick, camera_chdk, camera_gphoto, preview, errorlog, preview_thread
 import os, json, string, re, traceback, errno
 import wiringpi
 
-version = '1.0'
+version = '1.5'
 debug = False
 
 odd = None
 even = None
 config = {}
+gphoto = False
 
 #########################################################################################
 
@@ -43,21 +44,28 @@ class CameraSide:
     self.preview.position(self.position)
 
   def reset(self, info):
-    self.serial = info.serial_num
-    self.camera = camera.Camera(info, self.config)
+    if info.chdk_api is not None:
+      self.serial = info.serial_num
+      self.camera = camera_chdk.Camera(info, self.config)
+    else:
+      self.serial = info.serial_num
+      self.camera = camera_gphoto.Camera(info, self.config)
     self.camera.position = self.position
     self.camera.connect()
 
-  def capture(self, newFilename, shouldRefocus):
-    self.filename = newFilename
+  def capture(self, newFilename, mountPoint, shouldRefocus):
+    # Set the filename we will later save to using .jpg for CHDK cameras
+    self.filename = newFilename + '.jpg'
     self.scan = None
     self.code = camera_thread.WAITING 
     self.message = 'Lost Connection to Camera'
-    self.thread.beginCapture(self.camera, shouldRefocus)
+    # Pass in a .jpg-less filename for gphoto cameras because they add
+    # on .jpg automatically.
+    self.thread.beginCapture(self.camera, shouldRefocus, mountPoint + newFilename)
 
   def save(self, mountPoint):
     #print 'Camera: ', self.position, ' saving image: ', self.filename
-    if self.raw is not None and self.filename is not None and self.code == camera_thread.COMPLETE:
+    if self.raw is not None and not isinstance(self.raw, basestring) and self.filename is not None and self.code == camera_thread.COMPLETE:
       fp = open(mountPoint + self.filename, 'w')
       fp.write(self.raw)
       fp.close()
@@ -176,10 +184,16 @@ def swapSides():
 
 # Returns a tuple of (oddFound, evenFound, tooManyCameras)
 def checkCameras():
+  global gphoto
   oddFound = False
   evenFound = False
   tooManyCameras = False
-  cameraList = camera.search()
+  cameraList = camera_chdk.search()
+  if len(cameraList) == 0:
+    cameraList = camera_gphoto.search()
+    gphoto = True
+  else:
+    gphoto = False
   #cameraList = [0,0]
   try:
     if len(cameraList) > 2:
@@ -278,10 +292,10 @@ class OptionSelect(RelativeLayout):
     try:
       odd.config[self.key] = self.oddControl.get()
       odd.camera.isReady = False
-      odd.capture('/debug/preview-odd.jpg', camera_thread.AUTO_FOCUS)
+      odd.capture('/debug/preview-odd', self.manager.mountPoint, camera_thread.AUTO_FOCUS)
       even.config[self.key] = self.evenControl.get()
       even.camera.isReady = False
-      even.capture('/debug/preview-even.jpg', camera_thread.AUTO_FOCUS)
+      even.capture('/debug/preview-even', self.manager.mountPoint, camera_thread.AUTO_FOCUS)
       self.manager.capturePage = self.manager.current
       self.manager.mustPreview = True
       self.manager.transition.direction = 'left'
@@ -391,7 +405,7 @@ class StartScreen(Screen):
       self.powerOff.text = waitString + ' [color=ff3333]Do not power off.[/color]'
     self.manager.mountPoint = None
     if ((odd.camera is not None and odd.camera.is_connected()) or
-        (even.camera is not None and even.camera.is_connected())):
+        (even.camera is not None and even.camera.is_connected())) and not gphoto:
       self.cameraOffButton.opacity = 1.0
     else:
       self.cameraOffButton.opacity = 0.0
@@ -578,6 +592,7 @@ class ConfigureCameraScreen(Screen):
         self.cameraNext.disabled = False
         self.searchingLayout.opacity = 0.0
         self.foundLayout.opacity = 1.0
+        self.updateFound()
       elif not oddFound and not evenFound:
         self.cameraLabel.text = 'No cameras found. Plug in or turn on the cameras.' + errorText
         self.cameraNext.disabled = True
@@ -594,6 +609,18 @@ class ConfigureCameraScreen(Screen):
         self.searchingLayout.opacity = 1.0
         self.foundLayout.opacity = 0.0
 
+  def updateFound(self):
+    if gphoto:
+      self.foundLabel.text = 'Found gphoto cameras. Remember to set all camera settings including zoom and focus before proceeding.'
+      self.zoomButton.opacity = 0.0
+      self.shutterButton.opacity = 0.0
+      self.debugButton.opacity = 0.0
+    else:
+      self.foundLabel.text = 'Found two CHDK cameras. Click next to continue.'
+      self.zoomButton.opacity = 1.0
+      self.shutterButton.opacity = 1.0
+      self.debugButton.opacity = 1.0
+        
   def keyPress(self, key):
     handleKeyPress(key,
                    { '1': self.nextAction,
@@ -765,6 +792,10 @@ class FocusCameraScreen(Screen):
   
   def update(self, dt):
     checkForDisconnected(self.manager)
+    if gphoto:
+      self.cameraRefocus.text = 'Test Shot (3)'
+    else:
+      self.cameraRefocus.text = 'Refocus (3)'
 
   def keyPress(self, key):
     handleKeyPress(key,
@@ -791,6 +822,10 @@ class FocusCameraScreen(Screen):
         self.preview.opacity = 1.0
       else:
         self.noPreviewLabel.opacity = 1.0
+        if gphoto:
+          self.noPreviewLabel.text = 'Press pages against glass and take a test shot'
+        else:
+          self.noPreviewLabel.text = 'Press pages against glass and tap refocus'
         self.preview.opacity = 0.0
 
       odd.code = camera_thread.COMPLETE
@@ -822,8 +857,8 @@ class FocusCameraScreen(Screen):
 
   def cameraRefocusAction(self):
     try:
-      odd.capture('/debug/preview-odd.jpg', camera_thread.LOCK_FOCUS)
-      even.capture('/debug/preview-even.jpg', camera_thread.LOCK_FOCUS)
+      odd.capture('/debug/preview-odd', self.manager.mountPoint, camera_thread.LOCK_FOCUS)
+      even.capture('/debug/preview-even', self.manager.mountPoint, camera_thread.LOCK_FOCUS)
       self.manager.capturePage = 'focus-camera'
       self.manager.transition.direction = 'left'
       self.manager.mustPreview = True
@@ -1059,15 +1094,15 @@ class CaptureScreen(Screen):
 
   def scanAt(self, pageNumber):
     if pageNumber is not None:
-      odd.capture(self.makeFile(pageNumber+1), camera_thread.KEEP_FOCUS)
-      even.capture(self.makeFile(pageNumber), camera_thread.KEEP_FOCUS)
+      odd.capture(self.makeFile(pageNumber+1), self.manager.mountPoint, camera_thread.KEEP_FOCUS)
+      even.capture(self.makeFile(pageNumber), self.manager.mountPoint, camera_thread.KEEP_FOCUS)
       self.manager.capturePage = 'capture'
       self.manager.mustPreview = False
       self.manager.transition.direction = 'left'
       self.manager.current = 'capture-wait'
 
   def makeFile(self, number):
-    return '/images/%04d.jpg' % number
+    return '/images/%04d' % number
 
   def done(self):
     try:
@@ -1291,6 +1326,7 @@ class ScanApp(App):
 
   def checkPedal(self, dt):
     try:
+      pass
       # Only trigger a capture when the circuit goes from open to closed
       nextPedal = wiringpi.digitalRead(21)
       #print('checkPedal', nextPedal)

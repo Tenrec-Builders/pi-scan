@@ -5,7 +5,7 @@ Pi Scan is a simple and robust camera controller for book scanners. It was desig
 # Requirements
 
 * Raspberry Pi 2 or Raspberry Pi 3
-* Two cameras (Canon PowerShot A2500 or Canon PowerShot ELPH 160 (aka IXUS 160))
+* Two cameras (Canon PowerShot A2500 or Canon PowerShot ELPH 160 (aka IXUS 160) or Nikon 1 J5)
 * Three 4GB SD Cards (2 for cameras, 1 for Pi). One needs to be micro (for the Pi). The other two need to be standard sized or have adapters.
 * USB Storage device (either an SD Card Reader and fast SD Card or a thumb drive)
 * Input Devices (see below
@@ -40,13 +40,29 @@ Industrial foot pedals are more robust than equivalently priced USB foot pedals.
 
 Any electrical connection between the GPIO21 and GND pins on the Raspberry Pi will cause a capture when scanning. So any button or microswitch can work as a scanning trigger if it is wired up properly.
 
-# Updating
+# Using Nikon 1 J5 cameras or other mirrorless/DSLRs
 
-If you are using version Pi Scan 0.8 or later, you may be able to update your installation without downloading the whole image and re-imaging your SD card. Download an update file linked below, copy it to your external storage (in the root folder, not in the 'images' or 'debug' folders), and boot up Pi Scan. Tap 'Begin Scan'. Then when the external storage is loaded, you should see an 'Upgrade' button on the top right. Tap that and updating should take just a few seconds.
+The latest version of Pi Scan includes gphoto2 and uses it to support a host of DSLR and mirrorless cameras (see ![list of supported cameras](http://www.gphoto.org/proj/libgphoto2/support.php)). Scanning using a DSLR works a bit differently than using a CHDK-supported Canon point and shoot camera.
 
-If the above process does not work, then download a full image below and install it instead.
+With a DSLR, all configuration of the cameras including focus and zoom must be done manually by the user via the camera's standard interface. Pi Scan itself only triggers the capture of images and stores them together on the external storage. Most settings on a camera persist even when it is powered off. But if there are any settings that revert, you must be willing to reset them at the beginning of every session.
 
-* [Update to Pi Scan 1.0](http://tenrec.builders/pi-scan/1.0/pi-scan-update-1.0.archive)
+An additional advantage of using gphoto-compatible cameras is that if you specify a raw image output, Pi Scan will automatically fetch and collate the raw images alongside the JPEG files.
+
+The high quality camera that we currently recommend is the Nikon 1 J5 camera. If you are unsure of which camera to get, then this is the one to pick. It is more likely to just work (it is the model of camera used for testing Pi Scan), and we are more likely to be able to provide effective support if it doesn't. In addition, it has an exceptionally long life. Many DSLRs are rated for just 100,000 shutter actuations. The Nikon 1 J5 cameras have much longer lifetimes, exceeding 1 million actuations.
+
+Recommended settings for scanning with an Archivist Quill or Archivist using a Nikon 1 J5 camera:
+
+- Manual mode (M on the mode dial)
+- Shutter speed: 1/15 second
+- F-Stop: 5.6
+- ISO: 100
+- White Balance: Incandescent or us a gray card for custom set
+- Image Quality: JPEG fine or NEF (RAW) + JPEGfine
+- Image Size: L (5568x3712)
+- Auto distortion control: on
+- Focus mode: AF-A -- The Nikon 1 J5 camera uses area-based autofocus which means it should work well even on pages that are mostly blank. If necessary, the Nikon 1 J5 camera also has a manual focus mode. But the manual focus must be re-done every time the camera is powered off.
+- AF-area mode: Auto-area
+- Zoom: Zoom in until all four edges of the platen are just visible. Note that the Nikon 1 J5 loses the zoom setting on power off, so this must be set every session and you may end up with a slightly different zoom value from session to session. For this reason, it is a good idea to scan a whole book in a single session rather than splitting it between sessions.
 
 # Download
 
@@ -161,6 +177,7 @@ Always rememeber that you cannot corrupt Pi Scan by rebooting so if there are ev
 
 # Version Notes
 
+- 1.5 -- Added support for gphoto2 (![list of supported cameras](http://www.gphoto.org/proj/libgphoto2/support.php)), SD cards larger than 32 GB.
 - 1.0 -- Added shutter speed adjustment, support for trigger via GPIO pins, full keyboard support, touch screen support, an upgrade mechanism, beep on error, focus when zooming, many crashes, and more.
 - 0.7 -- Added page numbers during capture. Fixed ISO and shutter speed settings. Attempt to fix camera crashes when entering alt mode. Add Pi Scan crash detection for preview and camera threads.
 - 0.6 -- Fixed preview rotation. Images were being shown upside down.

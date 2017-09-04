@@ -2,7 +2,7 @@
 
 cp work/base.img work/installed.img
 
-sudo mount work/installed.img -o loop,offset=67108864,rw -t ext4 mnt
+sudo mount work/installed.img -o loop,offset=70254592,rw -t ext4 mnt
 sudo mount work/installed.img -o loop,offset=4194304,rw mnt/boot
 
 sudo mv mnt/etc/ld.so.preload  mnt/etc/ld.so.preload.backup
