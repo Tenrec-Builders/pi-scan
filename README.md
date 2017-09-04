@@ -42,7 +42,7 @@ Any electrical connection between the GPIO21 and GND pins on the Raspberry Pi wi
 
 # Using Nikon 1 J5 cameras or other mirrorless/DSLRs
 
-The latest version of Pi Scan includes gphoto2 and uses it to support a host of DSLR and mirrorless cameras (see ![list of supported cameras](http://www.gphoto.org/proj/libgphoto2/support.php)). Scanning using a DSLR works a bit differently than using a CHDK-supported Canon point and shoot camera.
+The latest version of Pi Scan includes gphoto2 and uses it to support a host of DSLR and mirrorless cameras (see [list of supported cameras](http://www.gphoto.org/proj/libgphoto2/support.php)). Scanning using a DSLR works a bit differently than using a CHDK-supported Canon point and shoot camera.
 
 With a DSLR, all configuration of the cameras including focus and zoom must be done manually by the user via the camera's standard interface. Pi Scan itself only triggers the capture of images and stores them together on the external storage. Most settings on a camera persist even when it is powered off. But if there are any settings that revert, you must be willing to reset them at the beginning of every session.
 
@@ -177,7 +177,7 @@ Always rememeber that you cannot corrupt Pi Scan by rebooting so if there are ev
 
 # Version Notes
 
-- 1.5 -- Added support for gphoto2 (![list of supported cameras](http://www.gphoto.org/proj/libgphoto2/support.php)), SD cards larger than 32 GB.
+- 1.5 -- Added support for gphoto2 ([list of supported cameras](http://www.gphoto.org/proj/libgphoto2/support.php)), SD cards larger than 32 GB.
 - 1.0 -- Added shutter speed adjustment, support for trigger via GPIO pins, full keyboard support, touch screen support, an upgrade mechanism, beep on error, focus when zooming, many crashes, and more.
 - 0.7 -- Added page numbers during capture. Fixed ISO and shutter speed settings. Attempt to fix camera crashes when entering alt mode. Add Pi Scan crash detection for preview and camera threads.
 - 0.6 -- Fixed preview rotation. Images were being shown upside down.
