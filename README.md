@@ -2,6 +2,8 @@
 
 Pi Scan is a simple and robust camera controller for book scanners. It was designed to work with the [Archivist book scanner](http://diybookscanner.org/archivist). For questions or help, visit the [forum](http://diybookscanner.org/forum) or email help at tenrec dot builders.
 
+## Translations: [Espanol](https://github.com/Tenrec-Builders/pi-scan/blob/master/README.es.md)
+
 # Requirements
 
 * Raspberry Pi 2 or Raspberry Pi 3
