@@ -58,6 +58,8 @@ def search():
           result.append(info)
   except LuaError as e:
     errorlog.write('Failed to search: LuaError: ' + str(e.args) + '\nTraceback: ' + traceback.format_exc())
+  except chdkptp.PTPError as e:
+    errorlog.write('Failed to search: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
   except Exception as e:
     errorlog.write('Failed to search: ' + str(e.args) + '\n' + traceback.format_exc())
   return result
@@ -105,6 +107,8 @@ class Camera:
         else:
           self.message = 'Lost connection before prepare capture'
           self.log('Failed while preparing: ' + self.message)
+      except chdkptp.PTPError as e:
+        self.log('Failed while preparing: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
       except Exception as e:
         self.log('Failed while preparing: ' + str(e.args) + '\n' + traceback.format_exc())
     return success
@@ -167,6 +171,8 @@ class Camera:
       else:
         self.message = 'Lost connection before refocus'
         self.log('Failed to refocus: ' + self.message)
+    except chdkptp.PTPError as e:
+      self.log('Failed to refocus: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
     except Exception as e:
       self.log('Failed to refocus: ' + str(e.args) + '\n' + traceback.format_exc())
     return success
@@ -181,8 +187,10 @@ class Camera:
       else:
         self.message = 'Lost connection before unlock focus'
         self.log('Failed to unlock focus: ' + self.message)
+    except chdkptp.PTPError as e:
+      self.log('Failed to unlock focus: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
     except Exception as e:
-      self.log('Failed to refocus: ' + str(e.args) + '\n' + traceback.format_exc())
+      self.log('Failed to unlock focus: ' + str(e.args) + '\n' + traceback.format_exc())
     return success
     
   def connect(self):
@@ -192,6 +200,8 @@ class Camera:
       if not self.device.is_connected:
         self.device.reconnect()
       success = True
+    except chdkptp.PTPError as e:
+      self.log('Failed to connect: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
     except Exception as e:
       self.log('Failed to connect: ' + str(e.args) + '\n' + traceback.format_exc())
     return success
@@ -256,6 +266,8 @@ class Camera:
         self.message = 'Tried to capture before preparing camera'
       else:
         self.message = 'Lost connection before capture'
+    except chdkptp.PTPError as e:
+      self.log('Failed to capture: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
     except Exception as e:
       self.log('Failed to capture: ' + str(e.args) + '\n' + traceback.format_exc())
     return result
@@ -356,6 +368,8 @@ class Camera:
     try:
       if self.is_connected():
         self.device.lua_execute('sleep(50); play_sound(6)', do_return=False)
+    except chdkptp.PTPError as e:
+      self.log('Failed to beep: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
     except Exception as e:
       self.log('Failed to beep: ' + str(e) + ' ' + str(e.args) + '\n' + traceback.format_exc())
 
@@ -366,6 +380,8 @@ class Camera:
       if self.is_connected():
         self.device.lua_execute('sleep(50); post_levent_to_ui("PressPowerButton")',
                                 do_return=False)
+    except chdkptp.PTPError as e:
+      self.log('Failed to power off: PTPError: ' + str(e.args) + '\n' + traceback.format_exc() + '\nPTP Traceback:\n' + e.traceback)
     except Exception as e:
       self.log('Failed to power off: ' + str(e) + ' ' + str(e.args) + '\n' + traceback.format_exc())
 
