@@ -1216,12 +1216,11 @@ class DebugScreen(Screen):
 
   def on_pre_enter(self):
     try:
-      self.oddMessage.text = ''
-      self.evenMessage.text = ''
-      self.oddStatus.text = 'Searching...'
-      self.evenStatus.text = 'Searching...'
       even.camera.beepFail()
       odd.camera.beepFail()
+      (oddFound, evenFound, tooManyFound) = checkCameras()
+      self.updateSide(oddFound, odd, self.oddStatus, self.oddLog, self.oddMessage)
+      self.updateSide(evenFound, even, self.evenStatus, self.evenLog, self.evenMessage)
     except Exception as e:
       handleCrash(e)
 
@@ -1361,7 +1360,7 @@ class ScanApp(App):
         handleCrash(e)
     return True
 
-  def on_key_up(self, window, scancode, codepoint, key, other):
+  def on_key_up(self, window, scancode, codepoint):
     self.handlingKey = False
 
 if __name__ == '__main__':
